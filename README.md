@@ -3,12 +3,12 @@ Computer algorithms used in image stylization to render a photo into the method/
 
 
 Requirements:
-    python3 -> installed
+    <br>&nbsp;&nbsp;&nbsp;&nbsp; python3 -> installed
 
 How to run:
-    Windows:
-        -Please run the "scripts/init.bat" script to ensure every dependencies is installed (before everything)
-        -To start the project please run the script "scripts/run.py"
-    Linux/MacOS:
-        -Please run the "scripts/init.sh" script to ensure every dependencies is installed (before everythin)
-        -To start the project please run the script "scripts/run.py"
+    <br>&nbsp;&nbsp;&nbsp;&nbsp; Windows:
+        <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * Please run the "scripts/init.bat" script to ensure every dependencies is installed (before everything)
+        <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * To start the project please run the script "scripts/run.py"
+    <br>&nbsp;&nbsp;&nbsp;&nbsp; Linux/MacOS:
+        <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * Please run the "scripts/init.sh" script to ensure every dependencies is installed (before everythin)
+        <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * To start the project please run the script "scripts/run.py"

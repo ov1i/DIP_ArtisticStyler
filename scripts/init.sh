@@ -2,7 +2,7 @@
 
 # Function to update deps, install python3-venv and ensure pip is installed
 install_venv() {
-    sudo apt-get update
+   # sudo apt-get update
     sudo apt-get install -y python3-pip
     sudo apt-get install -y python3-venv
 }

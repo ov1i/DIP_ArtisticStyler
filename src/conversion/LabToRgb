@@ -1,0 +1,51 @@
+import numpy as np
+
+# Function to convert from LAB to RGB
+def lab_to_rgb(lab_image):
+    # Separate LAB channels
+    L, a, b = lab_image[:, :, 0], lab_image[:, :, 1], lab_image[:, :, 2]
+
+    # Normalize LAB values (L in [0, 100], a and b in [-128, 127])
+    Y = (L + 16) / 116
+    X = a / 500 + Y
+    Z = Y - b / 200
+
+    # Reverse normalize XYZ for the D65 illuminant
+    X = X ** 3 if np.any(X > 0.206897) else (X - 16 / 116) / 7.787
+    Y = Y ** 3 if np.any(Y > 0.206897) else (Y - 16 / 116) / 7.787
+    Z = Z ** 3 if np.any(Z > 0.206897) else (Z - 16 / 116) / 7.787
+
+    # Normalize for D65 illuminant
+    X *= 0.95047
+    Z *= 1.08883
+
+    # Convert XYZ to linear RGB
+    r = X * 3.2404542 + Y * -1.5371385 + Z * -0.4985314
+    g = X * -0.9692660 + Y * 1.8760108 + Z * 0.0415560
+    b = X * 0.0556434 + Y * -0.2040259 + Z * 1.0572252
+
+    # Clip to the range [0, 1] before gamma correction
+    r = np.clip(r, 0, 1)
+    g = np.clip(g, 0, 1)
+    b = np.clip(b, 0, 1)
+
+    # Inverse gamma correction (sRGB)
+    def inverse_gamma_correction(c):
+        return np.where(c <= 0.0031308, 12.92 * c, 1.055 * np.power(c, 1 / 2.4) - 0.055)
+
+    r = inverse_gamma_correction(r)
+    g = inverse_gamma_correction(g)
+    b = inverse_gamma_correction(b)
+
+    # Convert to 8-bit values and stack the channels
+    rgb_image = np.stack([r, g, b], axis=-1)
+    rgb_image = (rgb_image * 255).astype(np.uint8)
+
+    return rgb_image
+
+# Example usage
+lab_image = np.random.rand(100, 100, 3)  # Assuming you have a LAB image here
+rgb_image = lab_to_rgb(lab_image)
+
+# Optionally, save or display the RGB image
+print("RGB image shape:", rgb_image.shape)

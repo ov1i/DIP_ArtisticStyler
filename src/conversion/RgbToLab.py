@@ -6,7 +6,6 @@ def rgb_to_lab(src):
    
     r, g, b = src[:, :, 0], src[:, :, 1], src[:, :, 2]
 
-
     # # Normalize RGB
     r = r / 255.0
     g = g / 255.0

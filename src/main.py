@@ -1,30 +1,31 @@
+import sys
+
 import cv2 
 import numpy as np
+
 import conversion.color_space_conversions as cc
-
-import subtr.subtr as sub
-initial_img = cv2.imread("/Users/horvathdaiana/DIP_ArtisticStyler/res/test1.jpeg")
-painting_img=cv2.imread("/Users/horvathdaiana/DIP_ArtisticStyler/res/oil_test2.jpeg")
-img=cv2.cvtColor(initial_img,cv2.COLOR_RGB2LAB)
-painting=cv2.cvtColor(painting_img, cv2.COLOR_RGB2Lab)
-black_img= np.zeros((1200, 1200, 3), dtype = np.uint8)
-
-transf_img=cc.rgb_to_lab(img)
-transf_img_painting=cc.rgb_to_lab(painting)
-cv2.imshow("initial image", initial_img)
-cv2.imshow("painting image", painting_img)
-cv2.imshow("rgb to lab initial", img)
-cv2.imshow("rgb to lab painting", painting)
-
-sub_initial_img=sub.subtrScalingAdd(img, painting)
-lab_to_rgb_initial=cv2.cvtColor(sub_initial_img, cv2.COLOR_Lab2RGB)
-cv2.imshow("test color matching",lab_to_rgb_initial)
-cv2.waitKey(0)
+import color_matching.cm as cm
 
 
-cv2.imshow("test", transf_img)
+initial_img = cv2.imread("res/source/p4.jpg")
+painting_img = cv2.imread("res/source/p3.jpg")
 
-cv2.waitKey(0)
+if(initial_img is None):
+    print("Invalid path for the source image")
+    sys.exit(-1)
+if(painting_img is None):
+    print("Invalid path for the oil painting image")
+    sys.exit(-1)
+
+initial_img_lab = cc.bgr_rgb_to_lab(initial_img)
+painting_img_lab = cc.bgr_rgb_to_lab(painting_img)
+
+cm_img_lab = cm.match_colors(initial_img_lab, painting_img_lab)
+
+cm_img_bgr = cc.lab_to_bgr_rgb(cm_img_lab)
+
+cv2.imwrite("res/results/test_color_matching.jpg", cm_img_bgr)
+
 
 
 

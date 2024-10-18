@@ -1,9 +1,10 @@
 import numpy as np
+import cv2
 
 # Function to convert from LAB to RGB
-def lab_to_rgb(lab_image):
+def lab_to_bgr_rgb(src, bgr = 1):
     # Separate LAB channels
-    L, a, b = lab_image[:, :, 0], lab_image[:, :, 1], lab_image[:, :, 2]
+    L, a, b = cv2.split(src)
 
     # Normalize LAB values (L in [0, 100], a and b in [-128, 127])
     Y = (L + 16) / 116
@@ -37,16 +38,32 @@ def lab_to_rgb(lab_image):
     g = inverse_gamma_correction(g)
     b = inverse_gamma_correction(b)
 
-    # Convert to 8-bit values and stack the channels
-    rgb_image = np.stack([r, g, b], axis=-1)
-    rgb_image = (rgb_image * 255).astype(np.uint8)
+    # Merge resulted data into a image with 3 color ch
+    if(bgr == 0):
+        res = cv2.merge([r,g,b])
+    elif(bgr == 1): 
+        res = cv2.merge([b,g,r])
+    else:
+        print("Warning invalid parameter passed!")
+        print("Continuing with default value")
+        res = cv2.merge([b,g,r])
+        
+    # Convert to uint8 values (unsigned 8 bit integers for each channel value range(0-255))
+    res = (res * 255).astype(np.uint8)
 
-    return rgb_image
+    return res
 
 
-def rgb_to_lab(src):
-   
-    r, g, b = src[:, :, 0], src[:, :, 1], src[:, :, 2]
+def bgr_rgb_to_lab(src, bgr = 1):
+
+    if(bgr == 1):
+        b, g, r = cv2.split(src)
+    elif(bgr == 0):
+        r, g, b = cv2.split(src)
+    else:
+        print("Warning invalid parameter passed!")
+        print("Continuing with default value")
+        res = cv2.merge([b,g,r])
 
     # # Normalize RGB
     r = r / 255.0
@@ -91,6 +108,6 @@ def rgb_to_lab(src):
     a = np.clip(a, -128, 127)
     b = np.clip(b, -128, 127)
 
-    lab_image = np.stack([L, a, b], axis=-1).astype(np.float32)
+    res = cv2.merge([L,a,b])
 
-    return lab_image
+    return res

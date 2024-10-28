@@ -1,17 +1,33 @@
 import subprocess as sp
 import os
 
-python_path = ".venv/bin/python3"
+python3_exe = "python3"
+python_exe = "python"
 
-if(not os.path.exists(python_path)):
-    python_path = ".venv/Scripts/python"
+if os.name == 'nt':
+    print("\n\n\tWindows detected")
+    python3_exe = "python3.exe"
+    python_exe = "python.exe"
+else: 
+    print("\n\n\tLinux/MacOS detected")
 
-main_script_path =  " src/main.py"
+python_path = os.path.join(".venv", "bin", python3_exe)
 
-command = python_path + main_script_path
+if not os.path.exists(python_path):
+    python_path = os.path.join(".venv", "Scripts", python_exe)
+    if not os.path.exists(python_path):
+        print("\n\nError please check you have a virtual enviroment set up\n\n")
+        exit(-1)
 
-# Method 1
-sp.run(command, check=True, shell=True)
+main_script_path = os.path.join("src", "main.py")
+if not os.path.exists(main_script_path):
+    print("\n\nError please check run.py script path\n\n")
+    exit(-1)
 
-# Method 2
-# sp.Popen([python_path, main_script_path])
+if os.path.exists(python_path) and os.path.exists(main_script_path):
+    command = python_path + " " + main_script_path
+
+    sp.run(command, check=True, shell=True)
+else :
+    print("\n\nUnknown error\n\n")
+    exit(-1)

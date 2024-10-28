@@ -7,7 +7,7 @@ import conversion.color_space_conversions as cc
 import color_matching.cm as cm
 from feature_fusion.edge_enhancement import edge_enhancement_wrapper as enh_proc
 
-print("\n\n:::::SCRIPT RUNNING:::::\n\n")
+print("\n\n:::::::::SCRIPT RUNNING:::::::::\n\n")
 
 initial_img = cv2.imread("res/source/p4.jpg")
 painting_img = cv2.imread("res/source/p3.jpg")
@@ -33,6 +33,6 @@ cv2.imshow("Original Image", initial_img)
 
 cv2.waitKey(0)
 
-print("\n\n:::::EXIT EXECUTED SUCCESFULLY:::::\n\n")
+print("\n\n:::::::EXIT EXECUTED SUCCESFULLY:::::::\n\n")
 
 

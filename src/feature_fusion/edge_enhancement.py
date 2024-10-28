@@ -25,15 +25,21 @@ def convolution(src, k, edge_flag=0):
     target = np.clip(target, 0, 255)
 
     return target.astype(np.uint8)
+
 def edge_enhancement(src, w, prc_img):
     prc_img*=w
     src-=prc_img
     w=1-w
+
     return src/w
+
 def edge_enhancement_wrapper(src):
     k=g.GK_generator(5, 1)
     blurred_img = convolution(src, k).astype(np.float32)
     enhanced_img=edge_enhancement(src.astype(np.float32), 0.6, blurred_img)
+
+    enhanced_img = np.clip(enhanced_img, 0, 255).astype(np.uint8)
+
     return enhanced_img
 
 

@@ -24,7 +24,6 @@ cm_img_lab = cm.match_colors(initial_img_lab, painting_img_lab)
 
 cm_img_bgr = cc.lab_to_bgr_rgb(cm_img_lab)
 
-cv2.imwrite("res/results/interm_results_p43.jpg", cm_img_bgr)
 
 
 

@@ -1,12 +1,18 @@
 import numpy as np
 
 ## Gaussian Kernel Generator
-def GK_generator(size, sigma):
+def GK_generator(size, sigma, rec):
 
     if not np.isclose(6 * sigma + 1, size):
         print("Warning kernel size should be close to ", int(6 * sigma + 1), " (6 * sigma + 1)")
-        print("Using recommanded size ", int(6 * sigma + 1))
-        size = int(6 * sigma + 1)
+        if rec == 1:
+            print("Recommanded flag ON")
+            print("Using recommanded size ", int(6 * sigma + 1))
+            size = int(6 * sigma + 1)
+        elif rec == 0:
+            print("Recommanded flag OFF")
+            print("Continuing with the requested size")
+
 
 
     k = [[0 for _ in range(size)] for _ in range(size)]

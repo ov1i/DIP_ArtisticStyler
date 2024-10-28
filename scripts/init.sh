@@ -24,7 +24,7 @@ install_dependencies() {
 
 # Main script
 main() {
-    local env_name="venv"
+    local env_name=".venv"
 
     # Install python3-venv
     install_venv

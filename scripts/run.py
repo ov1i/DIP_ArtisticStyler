@@ -1,6 +1,10 @@
 import subprocess as sp
+import os
 
 python_path = ".venv/bin/python3"
+
+if(not os.path.exists(python_path)):
+    python_path = ".venv/Scripts/python"
 
 main_script_path =  " src/main.py"
 

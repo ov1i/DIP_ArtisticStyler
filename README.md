@@ -8,7 +8,7 @@ Requirements:
 How to run:
     <br>&nbsp;&nbsp;&nbsp;&nbsp; Windows (DOESN'T WORK FOR NOW, dependencies/requirements.txt should be installed manually for a first run):
         <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * Please run the "scripts/init.bat" script to ensure every dependencies is installed (before everything)
-        <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * To start the project please run from the project parent directory the script using the following command "python3 scripts/run.py"
+        <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * To start the project from the parent directory use the following command "python3 scripts/run.py"
     <br>&nbsp;&nbsp;&nbsp;&nbsp; Linux/MacOS:
         <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * Please run the "scripts/init.sh" script to ensure every dependencies is installed (before everything)
-        <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * To start the project please run from the project parent directory the script using the following command "python3 scripts/run.py"
+        <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; * To start the project from the parent directory use the following command "python3 scripts/run.py"

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import scipy.signal as sp
 from  feature_fusion import generators as g
 
 def convolution(src, k, edge_flag=0):
@@ -35,7 +36,13 @@ def edge_enhancement(src, w, prc_img):
 
 def edge_enhancement_wrapper(src):
     k=g.GK_generator(5, 1)
-    blurred_img = convolution(src, k).astype(np.float32)
+    # blurred_img = convolution(src, k).astype(np.float32)
+    blurred_img_ch0 = sp.convolve2d(src[:,:,0], k, boundary='symm', mode='same')
+    blurred_img_ch1 = sp.convolve2d(src[:,:,1], k, boundary='symm', mode='same')
+    blurred_img_ch2 = sp.convolve2d(src[:,:,2], k, boundary='symm', mode='same')
+
+    blurred_img = cv2.merge([blurred_img_ch0, blurred_img_ch1, blurred_img_ch2]).astype(np.float32)
+
     enhanced_img=edge_enhancement(src.astype(np.float32), 0.6, blurred_img)
 
     enhanced_img = np.clip(enhanced_img, 0, 255).astype(np.uint8)

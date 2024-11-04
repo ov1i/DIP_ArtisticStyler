@@ -53,6 +53,10 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# GCC
+*.a
+*.o
+
 # Translations
 *.mo
 *.pot

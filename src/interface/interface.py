@@ -1,29 +1,35 @@
 import PySimpleGUI as sg
 from PIL import Image, ImageTk
-import tkinter as tk
-from tkinter import filedialog
+import subprocess
 import time
-
-# Initialize tkinter root for file dialogs (required for macOS)
-root = tk.Tk()
-root.withdraw()  # Hide the tkinter root window
-
-# Set macOS-specific options to use ttk buttons for better compatibility
-sg.set_options(use_ttk_buttons=True)
+import platform
 
 def select_file():
-    """Use Tkinter's file dialog to select an image file."""
-    filename = filedialog.askopenfilename(
-        title="Choose an image file",
-        filetypes=[("Image Files", "*.png;*.jpg;*.jpeg;*.bmp")]
-    )
-    return filename
+    """Use an external file picker on macOS to select an image file."""
+    if platform.system() == 'Darwin':  # macOS
+        # Use an AppleScript-based file dialog, which avoids Tkinter issues on macOS
+        try:
+            filepath = subprocess.check_output(
+                '''osascript -e 'POSIX path of (choose file of type {"png", "jpg", "jpeg", "bmp"} with prompt "Select an image file")' ''',
+                shell=True,
+                text=True
+            ).strip()
+            return filepath
+        except subprocess.CalledProcessError:
+            return None  # Return None if the user cancels
+    else:
+        # Use PySimpleGUI's file dialog on non-macOS platforms
+        return sg.popup_get_file(
+            "Choose an image file", 
+            file_types=(("Image Files", "*.png;*.jpg;*.jpeg;*.bmp"),),
+            no_window=True
+        )
 
 def open_image(filename, window):
     """Open an image and update the window to display it."""
     try:
         if filename:
-            # Open and resize image to fit within 400x400 pixels (adjust size as needed)
+            # Open and resize image to fit within 400x400 pixels (adjust as needed)
             img = Image.open(filename)
             img.thumbnail((400, 400))
             
@@ -33,8 +39,8 @@ def open_image(filename, window):
             # Update the image element with the loaded image
             window['-IMAGE-'].update(data=img_tk)
             
-            # Store the image reference to prevent garbage collection (necessary for macOS)
-            window['-IMAGE-'].ImageData = img_tk
+            # Keep a reference to prevent garbage collection
+            window['-IMAGE-'].image = img_tk
         else:
             print("No file selected.")
     except Exception as e:
@@ -51,7 +57,7 @@ window = sg.Window("Image Viewer", layout, finalize=True)
 
 # Event loop to handle the "Open Image" button click
 while True:
-    # Read events with a small timeout to allow for smoother GUI updates on macOS
+    # Read events with a small timeout to allow smoother GUI updates on macOS
     event, values = window.read(timeout=10)
     
     if event == sg.WIN_CLOSED:

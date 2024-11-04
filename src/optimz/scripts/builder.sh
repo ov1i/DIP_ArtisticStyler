@@ -65,18 +65,19 @@ main() {
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then # Linux
             echo -e "\n...Linux detected continuing with the appropriate build...\n"
             gcc tests/run_convo_tests.c -L tests/ -l:convo_lib.a -lm -g -o tests/run_convo_tests.o
-        elif [[ "$OSTYPE" == "darwin"* ]]; then  # Mac OSX
+        else [[ "$OSTYPE" == "darwin"* ]]; then  # Mac OSX
             echo -e "\n...MacOS detected continuing with the appropriate build...\n"
             gcc -c tests/run_convo_tests.c -lm -g -o tests/convo_tests_object.o
             if [ $? -ne 0 ]; then
                 echo "Failed to compile the test program. Exiting with result -1."
                 exit -1
             fi
-            # gcc -lm -g -o run_convo_tests tests/convo_tests_object.o realpath 
+            gcc -lm -g -o run_convo_tests tests/convo_tests_object.o realpath convo_lib.a
             if [ $? -ne 0 ]; then
                 echo "Failed to compile the test program. Exiting with result -1."
                 exit -1
             fi
+        fi
         if [ $? -ne 0 ]; then
             echo "Failed to compile the test program. Exiting with result -1."
             exit -1

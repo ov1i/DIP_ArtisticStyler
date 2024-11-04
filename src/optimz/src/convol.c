@@ -233,6 +233,123 @@ void basic_vertConvol(double **_inputImageMat, int **_outputImageMat, double *_k
     }
 }
 
+
+/*// Horizontal step of separable convolution using AVX/NEON
+void convolve_horizontal_avx(const uint8_t* input, uint8_t* output, uint8_t* kH, uint8_t w, uint8_t h, uint8_t kSize) {
+    int c = kSize/2;
+    for (int i = 0;i<h;i++) {
+        for (int j = 0;j<w;j++) {
+            int sum = 0;
+            for(int k = -c; k <= c;k++) {
+                int jj = j + k;
+                if (jj >= 0 && jj < w) {
+                    sum += input[i * w + jj] * kH[k + c];
+                }
+            }
+            output[i * w + j] = sum;
+        }
+    }
+    uint8_t pad = kSize / 2;
+
+    for (int32_t i = 0; i < h; i++) {
+        for (int32_t j = 0; j < w; j += 32) {
+            __m256i result = _mm256_setzero_si256();  // Initialize AVX register to 0
+
+            for (uint8_t k = -pad; k <= pad; k++) {
+                // Load the input pixels
+                __m256i pixel = _mm256_loadu_epi8(&input[y * w + (x + k)]);
+                // Set the kernel value for multiplication
+                __m256i kernel_val = _mm256_set1_epi8(kH[k + pad]);
+                // Accumulate the results
+                result = _mm256_add_epi8(result, _mm256_mul_epi32(pixel, kernel_val));
+            }
+
+            // Store the result back to the output image
+            _mm256_storeu_ps(&output[y * w + x], result);  // Store result back
+        }
+    }
+}
+
+// Vertical pass of separable convolution using AVX/NEON
+void convolve_vertical_avx(uint8_t* input, uint8_t* output, uint8_t* kV, uint8_t w, uint8_t h, uint8_t kSize) {
+    int c = kSize/2;
+    for (int i = 0;i<h;i++) {
+        for (int j = 0;j<w;j++) {
+            int sum = 0;
+            for(int k = -c; k <= c;k++) {
+                int jj = j + k;
+                if (jj >= 0 && jj < w) {
+                    sum += input[i * w + jj] * kV[k + c];
+                }
+            }
+            output[i * w + j] = sum;
+        }
+    }
+    uint8_t pad = kSize / 2;
+
+    for (uint32_t y = pad; y < height - pad; y++) {
+        for (uint32_t x = 0; x < width; x += 8) {
+            __m256 result = _mm256_setzero_ps();  // Initialize AVX register to 0
+
+            // Apply vertical kernel
+            for (int k = -pad; k <= pad; k++) {
+                // Load the input pixels
+                __m256 pixel = _mm256_loadu_ps(&input[(y + k) * width + x]);
+                // Set the kernel value for multiplication
+                __m256 kernel_val = _mm256_set1_ps(kV[k + pad]);
+                // Accumulate the results
+                result = _mm256_add_ps(result, _mm256_mul_ps(pixel, kernel_val));
+            }
+
+            // Store the result back to the output image
+            _mm256_storeu_ps(&output[y * width + x], result);  // Store result back
+        }
+    }
+}
+
+// Main function for the 2D convolution using AVX/NEON
+void separable_cnvol_AVX(int* input, int* output, double* kernel, int w, int h, int kSize, int __pFlag) {
+    
+    // Allocate memory for intermediate buffer
+    uint8_t* _intBuf = (uint8_t*)malloc(w * h * sizeof(uint8_t));
+    if (_intBuf == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(1);
+    }
+
+    // Split the 2D kernel into 2x1D kernels
+    uint8_t* _verKernel = (uint8_t*)malloc( kSize * sizeof(uint8_t));
+    uint8_t* _horizKernel = (uint8_t*)malloc( kSize * sizeof(uint8_t));
+    _verKernel[0] = 1;
+    _verKernel[1] = 2;
+    _verKernel[2] = 1;
+
+    _horizKernel[0] = 1;
+    _horizKernel[1] = 2;
+    _horizKernel[2] = 1;
+
+
+    // Apply the convolution on both axis
+    convolve_horizontal_avx(input, _intBuf, _horizKernel, w, h,3);
+    convolve_vertical_avx(_intBuf, output, _verKernel, w, h, 3);
+
+    // Free intermediate buffer
+    if(_intBuf) {
+        free(_intBuf);
+    }
+
+    // Free vertical kernel
+    if(_verKernel) {
+        free(_verKernel);
+    }
+
+    // Free horizontal kernel
+    if(_horizKernel) {
+        free(_horizKernel);
+    }
+}
+*/
+
 // Separable convolution w/out AVX/NEON
 int** separable_convol(int** inputImage, double* hK, double* vK, int w, int h, int kSize, int _pFlag) {
     double **_horizConvoRes = (double**)malloc(h * sizeof(double*));

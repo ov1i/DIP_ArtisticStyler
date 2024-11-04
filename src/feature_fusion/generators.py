@@ -30,3 +30,9 @@ def GK_generator(size, sigma, rec = 0):
             k[i][j] /= norm_val
 
     return np.array(k)
+
+def GK_separator(kernel, size):
+    horiz_kernel = np.sum(kernel, axis=0)
+    vert_kernel = np.sum(kernel, axis=1)
+    
+    return horiz_kernel, vert_kernel

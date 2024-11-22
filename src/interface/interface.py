@@ -8,6 +8,7 @@ import cv2  # For OpenCV operations
 from src.color_matching.cm import match_colors
 from src.conversion.color_space_conversions import *
 from src.feature_fusion.edge_enhancement import edge_enhancement_wrapper
+#from src.interface.home_menu import home_menu
 
 
 # Function to select a file
@@ -57,9 +58,6 @@ def open_and_resize_image(filepath_or_pil_image, window, image_key, target_size=
         return None
     
 
-    
-
-
 # GUI Interface
 def interface_wrapper():
     BACKGROUND_COLOR = "#FFB6C1"
@@ -69,6 +67,7 @@ def interface_wrapper():
         [
             sg.Button("Open Initial Image", button_color=("black", "pink")),
             sg.Button("Open Style Image", button_color=("black", "pink")),
+            sg.Button("Back to home menu", button_color=("black", "pink")),
             sg.Button("Exit", button_color=("black", "pink")),
 
         ],
@@ -165,7 +164,16 @@ def interface_wrapper():
                 print("Style transfer completed.")
             except Exception as e:
                 sg.popup_error(f"Error during style transfer: {e}")
-
+        elif event=="Back to home menu":
+            
+            window=layout = [
+            [sg.Push(background_color=BACKGROUND_COLOR), sg.Text("Welcome to the Home Menu", font=("Papyrus", 30), justification="center", background_color=BACKGROUND_COLOR), sg.Push(background_color=BACKGROUND_COLOR)],
+            [sg.Push(background_color=BACKGROUND_COLOR), sg.Button("Step-by-step algo", size=(20, 2), button_color=("black", "pink"), font=("Papyrus", 10, "bold")), sg.Button("Direct result", size=(20, 2), button_color=("black", "pink"), font=("Papyrus", 10, "bold")), sg.Button("Exit", size=(20, 2), button_color=("black", "pink"), font=("Papyrus", 10, "bold")), sg.Push(background_color=BACKGROUND_COLOR)]
+            
+    ]
+            
+            
+                 
         elif event == "Exit":
             break
 

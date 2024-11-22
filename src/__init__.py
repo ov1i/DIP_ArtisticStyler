@@ -8,3 +8,4 @@ from .color_matching import cm
 from .conversion import color_space_conversions
 from .feature_fusion import edge_enhancement, generators, spectrum_extractor
 from .interface import interface
+from .interface import home_menu

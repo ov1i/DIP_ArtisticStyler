@@ -7,10 +7,11 @@ import numpy as np
 # import color_matching.cm as cm
 # from feature_fusion.edge_enhancement import edge_enhancement_wrapper as enh_proc
 
-from src import interface 
+from src.interface import interface_wrapper
+
 
 print("\n\n:::::::::SCRIPT RUNNING:::::::::\n\n")
 
-interface.interface_wrapper()
+interface_wrapper()
 
 print("\n\n:::::::EXIT EXECUTED SUCCESFULLY:::::::\n\n")

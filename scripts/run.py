@@ -19,7 +19,7 @@ if not os.path.exists(python_path):
         print("\n\nError please check you have a virtual enviroment set up\n\n")
         exit(-1)
 
-main_script_path = os.path.join("src", "main.py")
+main_script_path = "main.py"
 if not os.path.exists(main_script_path):
     print("\n\nError please check run.py script path\n\n")
     exit(-1)

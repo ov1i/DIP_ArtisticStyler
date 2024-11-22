@@ -3,18 +3,17 @@ from PIL import Image, ImageTk
 import subprocess
 import time
 import platform
-import sys
-sys.path.insert(1, 'src/color_matching')
-sys.path.insert(1, 'src/conversion' )
-sys.path.insert(1, 'src/feature_fusion' )
+import numpy as np
+import cv2  # For OpenCV operations
+from src.color_matching.cm import match_colors
+from src.conversion.color_space_conversions import *
+from src.feature_fusion.edge_enhancement import edge_enhancement_wrapper
 
-import conversion.color_space_conversions as cc
-import color_matching.cm as cm
-from feature_fusion.edge_enhancement import edge_enhancement_wrapper as enh_proc
 
+# Function to select a file
 def select_file():
-    """Use an external file picker on macOS to select an image file."""
-    if platform.system() == 'Darwin':  # macOS
+    """Use an external file picker on macOS or PySimpleGUI file picker."""
+    if platform.system() == "Darwin":  # macOS
         try:
             filepath = subprocess.check_output(
                 '''osascript -e 'POSIX path of (choose file of type {"png", "jpg", "jpeg", "bmp"} with prompt "Select an image file")' ''',
@@ -26,116 +25,150 @@ def select_file():
             return None  # Return None if the user cancels
     else:
         return sg.popup_get_file(
-            "Choose an image file", 
+            "Choose an image file",
             file_types=(("Image Files", "*.png;*.jpg;*.jpeg;*.bmp"),),
             no_window=True
         )
 
-def open_and_resize_image(filename, window, image_key, target_size=(640, 480)):
-    """Open an image, resize it to target dimensions, and update the window to display it."""
+
+# Function to open and resize an image
+def open_and_resize_image(filepath_or_pil_image, window, image_key, target_size=(640, 480)):
+    """
+    Open an image (from filepath or PIL.Image), resize it, and display it in the GUI.
+    """
     try:
-        if filename:
-            # Open the image
-            img = Image.open(filename)
-            if img.size == target_size:
-                print(f"The image already has the target dimensions: {target_size}.")
-            else:
-                print(f"Original image size: {img.size}. Resizing to {target_size}.")
-            
-            # Resize the image to the target size
-            img_resized = img.resize(target_size, Image.Resampling.LANCZOS)
-            
-            # Convert resized image to PhotoImage format for PySimpleGUI
-            img_tk = ImageTk.PhotoImage(img_resized)
-            
-            # Update the image element with the resized image
-            window[image_key].update(data=img_tk)
-            
-            # Keep a reference to prevent garbage collection
-            window[image_key].image = img_tk
-            
-            # Return the resized image for further computation
-            return img_resized
+        # Open image if input is a file path
+        if isinstance(filepath_or_pil_image, str):
+            img = Image.open(filepath_or_pil_image)
         else:
-            print("No file selected.")
+            img = filepath_or_pil_image  # Assume input is already a PIL Image object
+
+        # Resize image
+        img_resized = img.resize(target_size, Image.Resampling.LANCZOS)
+        img_tk = ImageTk.PhotoImage(img_resized)
+
+        # Update the GUI
+        window[image_key].update(data=img_tk)
+        window[image_key].image = img_tk  # Prevent garbage collection
+
+        return img_resized  # Return resized PIL Image
     except Exception as e:
-        sg.popup_error(f"An error occurred: {e}")
+        sg.popup_error(f"Error loading image: {e}")
         return None
+    
 
-# Define a background color for the window
+    
 
 
+# GUI Interface
 def interface_wrapper():
-    BACKGROUND_COLOR = "#FFB6C1"  # Dark gray background
+    BACKGROUND_COLOR = "#FFB6C1"
 
-# Define the layout of the window with a consistent background color
+    # GUI Layout
     layout = [
-    [sg.Button("Open Initial Image", button_color=("black", "pink")), 
-     sg.Button("Open the Image Whose Style to Be Transferred", button_color=("black", "pink")), 
-     sg.Button("Transfer the style", button_color=("black", "pink")), 
-     sg.Button("Exit", button_color=("black", "pink"))],
-     
-    [
-        sg.Column(
+        [
+            sg.Button("Open Initial Image", button_color=("black", "pink")),
+            sg.Button("Open Style Image", button_color=("black", "pink")),
+            sg.Button("Exit", button_color=("black", "pink")),
+
+        ],
+        [
+            sg.Column(
+                [[sg.Image(key="-INITIAL_IMAGE-", size=(300, 300), background_color=BACKGROUND_COLOR)]],
+                 background_color=BACKGROUND_COLOR,
+                 size=(500, 500),
+            ),
+            sg.Column(
+                [[sg.Image(key="-STYLE_IMAGE-", size=(300, 300), background_color=BACKGROUND_COLOR)]],
+                background_color=BACKGROUND_COLOR,
+                size=(500, 500),
+            ),
+            sg.Column(
+                [[sg.Image(key="-RESULT_IMAGE-", size=(300, 300), background_color=BACKGROUND_COLOR)]],
+                background_color=BACKGROUND_COLOR,
+                size=(500, 500),
+            ),
+            sg.Column(
             [
-                [sg.Image(key="-INITIAL_IMAGE-", size=(500, 500))]  # Placeholder for Initial Image
+                [sg.Button("Transfer Style", button_color=("black", "pink"))],
             ],
-            element_justification="center",
-            background_color=BACKGROUND_COLOR,  # Match window background
-            size=(500, 500),
+            background_color=BACKGROUND_COLOR,
+            size=(150, 500),  # Adjust width as needed
+            vertical_alignment="center",
+            element_justification="center",  # Center button horizontally
         ),
-        sg.Column(
-            [
-                [sg.Image(key="-STYLE_IMAGE-", size=(500, 500))]  # Placeholder for Style Image
-            ],
-            element_justification="center",
-            background_color=BACKGROUND_COLOR,  # Match window background
-            size=(500, 500),
-        )
-    ]
+        ],
     ]
 
-# Create the window with a fixed background color
+    # Create window
     window = sg.Window(
-    "Image Viewer", 
-    layout, 
-    finalize=True, 
-    background_color=BACKGROUND_COLOR,  # Set background color for the window
-    size=(1000, 600)  # Optional: Explicit window size
+        "Image Style Transfer",
+        layout,
+        background_color=BACKGROUND_COLOR,
+        finalize=True,
+        size=(1700, 600),
     )
 
-# Event loop to handle button clicks
+    # Variables to store images
+    initial_image = None
+    style_image = None
+
+    # Event loop
     while True:
-     event, values = window.read(timeout=10)
-     if event == sg.WIN_CLOSED:
-        break
-     elif event == "Open Initial Image":
-        filename = select_file()
-        if filename:
-            resized_img = open_and_resize_image(filename, window, "-INITIAL_IMAGE-")
-            # resized_img can now be used for further computations
-            if resized_img:
-                print(f"Resized Initial Image Size: {resized_img.size}")
-     elif event == "Open the Image Whose Style to Be Transferred":
-        filename = select_file()
-        if filename:
-            resized_img1 = open_and_resize_image(filename, window, "-STYLE_IMAGE-")
-            # resized_img can now be used for further computations
-            if resized_img1:
-                print(f"Resized Style Image Size: {resized_img.size}")
-     elif event =="Transfer the style"  :
-        initial_img_lab = cc.bgr_rgb_to_lab(resized_img)
-        painting_img_lab = cc.bgr_rgb_to_lab(resized_img1)
-        cm_img_lab = cm.match_colors(initial_img_lab, painting_img_lab)
-        cm_img_bgr = cc.lab_to_bgr_rgb(cm_img_lab, 1)
-        enhanced_img=enh_proc(cm_img_bgr)
-        img = open_and_resize_image(enhanced_img, window, "-STYLE_IMAGE-")
+        event, values = window.read(timeout=10)
+        if event == sg.WINDOW_CLOSED:
+            break
 
-     elif event == "Exit":
-        break
+        if event == "Open Initial Image":
+            filepath = select_file()
+            if filepath:
+                initial_image = open_and_resize_image(filepath, window, "-INITIAL_IMAGE-")
+                if initial_image:
+                    print(f"Loaded Initial Image with size: {initial_image.size}")
 
-    time.sleep(0.01)
+        elif event == "Open Style Image":
+            filepath = select_file()
+            if filepath:
+                style_image = open_and_resize_image(filepath, window, "-STYLE_IMAGE-")
+                if style_image:
+                    print(f"Loaded Style Image with size: {style_image.size}")
 
-# Close the window when done
+        elif event == "Transfer Style":
+            if not initial_image or not style_image:
+                sg.popup_error("Please load both images before transferring style.")
+                continue
+
+            try:
+                # Convert images to NumPy arrays
+                initial_array = np.array(initial_image)
+                style_array = np.array(style_image)
+
+                # Perform color matching
+                initial_lab = bgr_rgb_to_lab(initial_array)
+                style_lab = bgr_rgb_to_lab(style_array)
+                matched_lab = match_colors(initial_lab, style_lab)
+                matched_bgr = lab_to_bgr_rgb(matched_lab, 1)
+
+                # Perform edge enhancement
+                result_image = edge_enhancement_wrapper(matched_bgr)
+
+                # Convert back to PIL Image
+                result_pil = Image.fromarray(result_image.astype("uint8"))
+
+                open_and_resize_image(result_pil, window, "-RESULT_IMAGE-")
+                
+                # Show the resulting image using OpenCV's imshow
+                #cv2.imwrite("Transferred_Style_Result.jpg", result_bgr)
+                #cv2.waitKey(0)  # Wait for a key press to close the OpenCV window
+                 
+
+                print("Style transfer completed.")
+            except Exception as e:
+                sg.popup_error(f"Error during style transfer: {e}")
+
+        elif event == "Exit":
+            break
+
     window.close()
-interface_wrapper()    
+
+

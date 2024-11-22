@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import scipy.signal as sp
-from  feature_fusion import generators as g
+import src.feature_fusion.generators as g
 
 def convolution(src, k, edge_flag=0):
     rows, cols, channels= src.shape

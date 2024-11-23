@@ -3,7 +3,7 @@ from src.color_matching.cm import match_colors
 from src.conversion.color_space_conversions import *
 from src.feature_fusion.edge_enhancement import edge_enhancement_wrapper
 
-from src.interface import interface_wrapper
+from src.interface import main
 # Define the layout of the home menu
 def home_menu():
     BACKGROUND_COLOR = "#FFB6C1"
@@ -24,7 +24,7 @@ def home_menu():
 
         elif event == "Step-by-step algo":
             window.close()
-            interface_wrapper()
+           
 
         elif event == "Direct result":
             sg.popup("You selected Direct result")

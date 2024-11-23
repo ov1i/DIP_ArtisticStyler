@@ -1,14 +1,11 @@
 import PySimpleGUI as sg
 from PIL import Image, ImageTk
 import subprocess
-import time
 import platform
 import numpy as np
-import cv2  # For OpenCV operations
 from src.color_matching.cm import match_colors
 from src.conversion.color_space_conversions import *
 from src.feature_fusion.edge_enhancement import edge_enhancement_wrapper
-#from src.interface.home_menu import home_menu
 
 
 # Function to select a file
@@ -38,7 +35,6 @@ def open_and_resize_image(filepath_or_pil_image, window, image_key, target_size=
     Open an image (from filepath or PIL.Image), resize it, and display it in the GUI.
     """
     try:
-        # Open image if input is a file path
         if isinstance(filepath_or_pil_image, str):
             img = Image.open(filepath_or_pil_image)
         else:
@@ -52,30 +48,39 @@ def open_and_resize_image(filepath_or_pil_image, window, image_key, target_size=
         window[image_key].update(data=img_tk)
         window[image_key].image = img_tk  # Prevent garbage collection
 
-        return img_resized  # Return resized PIL Image
+        return img_resized
     except Exception as e:
         sg.popup_error(f"Error loading image: {e}")
         return None
-    
 
-# GUI Interface
-def interface_wrapper():
+
+# Function to create the Home Menu
+def create_home_menu():
     BACKGROUND_COLOR = "#FFB6C1"
+    layout = [
+        [sg.Text("Welcome to the Home Menu", font=("Papyrus", 30), justification="center", background_color=BACKGROUND_COLOR)],
+        [sg.Button("Step-by-Step Algo", size=(20, 2), button_color=("black", "pink"), font=("Papyrus", 10, "bold")),
+         sg.Button("Direct Result", size=(20, 2), button_color=("black", "pink"), font=("Papyrus", 10, "bold")),
+         sg.Button("Exit", size=(20, 2), button_color=("black", "pink"), font=("Papyrus", 10, "bold"))]
+    ]
+    return sg.Window("Home Menu", layout, background_color=BACKGROUND_COLOR, size=(600, 300), finalize=True)
 
-    # GUI Layout
+
+# Function to create the Main Interface
+def create_main_interface():
+    BACKGROUND_COLOR = "#FFB6C1"
     layout = [
         [
             sg.Button("Open Initial Image", button_color=("black", "pink")),
             sg.Button("Open Style Image", button_color=("black", "pink")),
-            sg.Button("Back to home menu", button_color=("black", "pink")),
+            sg.Button("Back to Home Menu", button_color=("black", "pink")),
             sg.Button("Exit", button_color=("black", "pink")),
-
         ],
         [
             sg.Column(
                 [[sg.Image(key="-INITIAL_IMAGE-", size=(300, 300), background_color=BACKGROUND_COLOR)]],
-                 background_color=BACKGROUND_COLOR,
-                 size=(500, 500),
+                background_color=BACKGROUND_COLOR,
+                size=(500, 500),
             ),
             sg.Column(
                 [[sg.Image(key="-STYLE_IMAGE-", size=(300, 300), background_color=BACKGROUND_COLOR)]],
@@ -88,37 +93,39 @@ def interface_wrapper():
                 size=(500, 500),
             ),
             sg.Column(
-            [
-                [sg.Button("Transfer Style", button_color=("black", "pink"))],
-            ],
-            background_color=BACKGROUND_COLOR,
-            size=(150, 500),  # Adjust width as needed
-            vertical_alignment="center",
-            element_justification="center",  # Center button horizontally
-        ),
+                [
+                    [sg.Button("Transfer Style", button_color=("black", "pink"))],
+                ],
+                background_color=BACKGROUND_COLOR,
+                size=(150, 500),
+                vertical_alignment="center",
+                element_justification="center",
+            ),
         ],
     ]
+    return sg.Window("Image Style Transfer", layout, background_color=BACKGROUND_COLOR, size=(1700, 600), finalize=True)
 
-    # Create window
-    window = sg.Window(
-        "Image Style Transfer",
-        layout,
-        background_color=BACKGROUND_COLOR,
-        finalize=True,
-        size=(1700, 600),
-    )
 
-    # Variables to store images
+# Main Function to Run the GUI
+def main():
+    window = create_home_menu()
     initial_image = None
     style_image = None
 
-    # Event loop
     while True:
         event, values = window.read(timeout=10)
-        if event == sg.WINDOW_CLOSED:
+        if event in (sg.WINDOW_CLOSED, "Exit"):
             break
 
-        if event == "Open Initial Image":
+        if event == "Step-by-Step Algo":
+            window.close()
+            window = create_main_interface()
+
+        elif event == "Back to Home Menu":
+            window.close()
+            window = create_home_menu()
+
+        elif event == "Open Initial Image":
             filepath = select_file()
             if filepath:
                 initial_image = open_and_resize_image(filepath, window, "-INITIAL_IMAGE-")
@@ -155,27 +162,10 @@ def interface_wrapper():
                 result_pil = Image.fromarray(result_image.astype("uint8"))
 
                 open_and_resize_image(result_pil, window, "-RESULT_IMAGE-")
-                
-                # Show the resulting image using OpenCV's imshow
-                #cv2.imwrite("Transferred_Style_Result.jpg", result_bgr)
-                #cv2.waitKey(0)  # Wait for a key press to close the OpenCV window
-                 
 
                 print("Style transfer completed.")
             except Exception as e:
                 sg.popup_error(f"Error during style transfer: {e}")
-        elif event=="Back to home menu":
-            
-            window=layout = [
-            [sg.Push(background_color=BACKGROUND_COLOR), sg.Text("Welcome to the Home Menu", font=("Papyrus", 30), justification="center", background_color=BACKGROUND_COLOR), sg.Push(background_color=BACKGROUND_COLOR)],
-            [sg.Push(background_color=BACKGROUND_COLOR), sg.Button("Step-by-step algo", size=(20, 2), button_color=("black", "pink"), font=("Papyrus", 10, "bold")), sg.Button("Direct result", size=(20, 2), button_color=("black", "pink"), font=("Papyrus", 10, "bold")), sg.Button("Exit", size=(20, 2), button_color=("black", "pink"), font=("Papyrus", 10, "bold")), sg.Push(background_color=BACKGROUND_COLOR)]
-            
-    ]
-            
-            
-                 
-        elif event == "Exit":
-            break
 
     window.close()
 

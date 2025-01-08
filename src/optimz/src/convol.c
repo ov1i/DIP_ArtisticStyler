@@ -162,7 +162,7 @@ void basic_horizConvol(int **_inputImageMat, double** _outputImageMat, double *_
                     int tmpPos = j + k;
                               
                     if (tmpPos >= 0 && tmpPos < w)
-                        tmpPxlVal += _inputImageMat[tmpPos][j] * _kernel[k + kHalfSize];
+                        tmpPxlVal += _inputImageMat[i][tmpPos] * _kernel[k + kHalfSize];
                 }
                 _outputImageMat[i][j] = tmpPxlVal;
             }
@@ -204,7 +204,7 @@ void basic_vertConvol(double **_inputImageMat, int **_outputImageMat, double *_k
                     int tmpPos = i + k;
 
                     if (tmpPos >= 0 && tmpPos < h)
-                        tmpPxlVal += _inputImageMat[tmpPos][j] * _kernel[k + kHalfSize];
+                        tmpPxlVal += _inputImageMat[i][tmpPos] * _kernel[k + kHalfSize];
 
                 }
                 _outputImageMat[i][j] = (int)round(tmpPxlVal);
@@ -233,124 +233,251 @@ void basic_vertConvol(double **_inputImageMat, int **_outputImageMat, double *_k
     }
 }
 
+#ifdef __AVX__
+// Horizontal convolution using AVX
+void horizConvol_AVX(int **_inputImageMat, double **_outputImageMat, double *_kernel, int w, int h, int kSize, int _pFlag) {
+    int kHalfSize = kSize / 2;
 
-/*// Horizontal step of separable convolution using AVX/NEON
-void convolve_horizontal_avx(const uint8_t* input, uint8_t* output, uint8_t* kH, uint8_t w, uint8_t h, uint8_t kSize) {
-    int c = kSize/2;
-    for (int i = 0;i<h;i++) {
-        for (int j = 0;j<w;j++) {
-            int sum = 0;
-            for(int k = -c; k <= c;k++) {
-                int jj = j + k;
-                if (jj >= 0 && jj < w) {
-                    sum += input[i * w + jj] * kH[k + c];
+    // Parallelize the rows
+    #pragma omp parallel for
+    for (int i = 0; i < h; i++) { 
+        for (int j = 0; j < w; j += 4) { 
+            __m256d tmpPxlVal = _mm256_setzero_pd();
+
+            for (int k = -kHalfSize; k <= kHalfSize; k++) {
+                int tmpPos = j + k;
+                __m256d kernelVal = _mm256_set1_pd(_kernel[k + kHalfSize]);
+                __m256d inputVal;
+
+                if (tmpPos >= 0 && tmpPos + 3 < w) {
+                    // Aligned memory access for main pixels
+                    inputVal = _mm256_set_pd(
+                        (double)_inputImageMat[i][tmpPos + 3],
+                        (double)_inputImageMat[i][tmpPos + 2],
+                        (double)_inputImageMat[i][tmpPos + 1],
+                        (double)_inputImageMat[i][tmpPos]
+                    );
+                } else {
+                    // Handle padding using masks
+                    double padded[4] = {0.0, 0.0, 0.0, 0.0};
+                    for (int idx = 0; idx < 4; idx++) {
+                        int pos = tmpPos + idx;
+                        if (pos >= 0 && pos < w) {
+                            padded[idx] = (double)_inputImageMat[i][pos];
+                        }
+                    }
+                    inputVal = _mm256_loadu_pd(padded);
+                }
+
+                tmpPxlVal = _mm256_fmadd_pd(kernelVal, inputVal, tmpPxlVal);
+            }
+
+            // Store results back
+            _mm256_storeu_pd(&_outputImageMat[i][j], tmpPxlVal);
+        }
+    }
+}
+
+// Vertical convolution using AVX
+void vertConvol_AVX(double **_inputImageMat, int **_outputImageMat, double *_kernel, int w, int h, int kSize, int _pFlag) {
+    int kHalfSize = kSize / 2;
+
+    #pragma omp parallel for
+    for (int j = 0; j < w; j++) {
+        for (int i = 0; i < h; i += 4) {
+            __m256d tmpPxlVal = _mm256_setzero_pd();
+
+            for (int k = -kHalfSize; k <= kHalfSize; k++) {
+                int tmpPos = i + k;
+                __m256d kernelVal = _mm256_set1_pd(_kernel[k + kHalfSize]);
+                __m256d inputVal;
+
+                if (tmpPos >= 0 && tmpPos + 3 < h) {
+                    inputVal = _mm256_set_pd(
+                        _inputImageMat[tmpPos + 3][j],
+                        _inputImageMat[tmpPos + 2][j],
+                        _inputImageMat[tmpPos + 1][j],
+                        _inputImageMat[tmpPos][j]
+                    );
+                } else {
+                    // Handle padding
+                    double padded[4] = {0.0, 0.0, 0.0, 0.0};
+                    for (int idx = 0; idx < 4; idx++) {
+                        int pos = tmpPos + idx;
+                        if (pos >= 0 && pos < h) {
+                            padded[idx] = _inputImageMat[pos][j];
+                        }
+                    }
+                    inputVal = _mm256_loadu_pd(padded);
+                }
+
+                tmpPxlVal = _mm256_fmadd_pd(kernelVal, inputVal, tmpPxlVal);
+            }
+
+            // Store results back
+            double tmpArray[4];
+            _mm256_storeu_pd(tmpArray, tmpPxlVal);
+            for (int idx = 0; idx < 4; idx++) {
+                if (i + idx < h) {
+                    _outputImageMat[i + idx][j] = (int)round(tmpArray[idx]);
                 }
             }
-            output[i * w + j] = sum;
-        }
-    }
-    uint8_t pad = kSize / 2;
-
-    for (int32_t i = 0; i < h; i++) {
-        for (int32_t j = 0; j < w; j += 32) {
-            __m256i result = _mm256_setzero_si256();  // Initialize AVX register to 0
-
-            for (uint8_t k = -pad; k <= pad; k++) {
-                // Load the input pixels
-                __m256i pixel = _mm256_loadu_epi8(&input[y * w + (x + k)]);
-                // Set the kernel value for multiplication
-                __m256i kernel_val = _mm256_set1_epi8(kH[k + pad]);
-                // Accumulate the results
-                result = _mm256_add_epi8(result, _mm256_mul_epi32(pixel, kernel_val));
-            }
-
-            // Store the result back to the output image
-            _mm256_storeu_ps(&output[y * w + x], result);  // Store result back
         }
     }
 }
 
-// Vertical pass of separable convolution using AVX/NEON
-void convolve_vertical_avx(uint8_t* input, uint8_t* output, uint8_t* kV, uint8_t w, uint8_t h, uint8_t kSize) {
-    int c = kSize/2;
-    for (int i = 0;i<h;i++) {
-        for (int j = 0;j<w;j++) {
-            int sum = 0;
-            for(int k = -c; k <= c;k++) {
-                int jj = j + k;
-                if (jj >= 0 && jj < w) {
-                    sum += input[i * w + jj] * kV[k + c];
+#endif
+
+#ifdef __ARM_NEON
+// Horizontal convolution using NEON
+void horizConvol_NEON(int **_inputImageMat, double **_outputImageMat, double *_kernel, int w, int h, int kSize, int _pFlag) {
+    int kHalfSize = kSize / 2;
+
+    // Zero-Padding case
+    if (_pFlag == 0) {
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j += 4) {
+                float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0);
+                float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
+
+                for (int k = -kHalfSize; k <= kHalfSize; k++) {
+                    int tmpPos = j + k;
+
+                    float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
+                    float64x2_t inputVal1, inputVal2;
+
+                    if (tmpPos >= 0 && tmpPos < w) {
+                        inputVal1 = vld1q_f64((double *)&_inputImageMat[i][tmpPos]);
+                        inputVal2 = vld1q_f64((double *)&_inputImageMat[i][tmpPos + 2]);
+                    } else {
+                        inputVal1 = vdupq_n_f64(0.0);
+                        inputVal2 = vdupq_n_f64(0.0);
+                    }
+
+                    tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1);
+                    tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2);
                 }
+
+                // Store results
+                vst1q_f64(&_outputImageMat[i][j], tmpPxlVal1);
+                vst1q_f64(&_outputImageMat[i][j + 2], tmpPxlVal2);
             }
-            output[i * w + j] = sum;
         }
-    }
-    uint8_t pad = kSize / 2;
+    } 
+    // Replicate-Padding case
+    else {
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w; j += 4) {
+                float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0);
+                float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
 
-    for (uint32_t y = pad; y < height - pad; y++) {
-        for (uint32_t x = 0; x < width; x += 8) {
-            __m256 result = _mm256_setzero_ps();  // Initialize AVX register to 0
+                for (int k = -kHalfSize; k <= kHalfSize; k++) {
+                    int tmpPos = j + k;
 
-            // Apply vertical kernel
-            for (int k = -pad; k <= pad; k++) {
-                // Load the input pixels
-                __m256 pixel = _mm256_loadu_ps(&input[(y + k) * width + x]);
-                // Set the kernel value for multiplication
-                __m256 kernel_val = _mm256_set1_ps(kV[k + pad]);
-                // Accumulate the results
-                result = _mm256_add_ps(result, _mm256_mul_ps(pixel, kernel_val));
+                    float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
+                    float64x2_t inputVal1, inputVal2;
+
+                    if (tmpPos < 0) {
+                        inputVal1 = vld1q_f64((double *)&_inputImageMat[i][0]);
+                        inputVal2 = vld1q_f64((double *)&_inputImageMat[i][0]);
+                    } else if (tmpPos >= w) {
+                        inputVal1 = vld1q_f64((double *)&_inputImageMat[i][w - 2]);
+                        inputVal2 = vld1q_f64((double *)&_inputImageMat[i][w - 2]);
+                    } else {
+                        inputVal1 = vld1q_f64((double *)&_inputImageMat[i][tmpPos]);
+                        inputVal2 = vld1q_f64((double *)&_inputImageMat[i][tmpPos + 2]);
+                    }
+
+                    tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1);
+                    tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2);
+                }
+
+                // Store results
+                vst1q_f64(&_outputImageMat[i][j], tmpPxlVal1);
+                vst1q_f64(&_outputImageMat[i][j + 2], tmpPxlVal2);
             }
-
-            // Store the result back to the output image
-            _mm256_storeu_ps(&output[y * width + x], result);  // Store result back
         }
     }
 }
 
-// Main function for the 2D convolution using AVX/NEON
-void separable_cnvol_AVX(int* input, int* output, double* kernel, int w, int h, int kSize, int __pFlag) {
-    
-    // Allocate memory for intermediate buffer
-    uint8_t* _intBuf = (uint8_t*)malloc(w * h * sizeof(uint8_t));
-    if (_intBuf == NULL) {
-        fprintf(stderr, "Memory allocation failed\n");
-        exit(1);
-    }
 
-    // Split the 2D kernel into 2x1D kernels
-    uint8_t* _verKernel = (uint8_t*)malloc( kSize * sizeof(uint8_t));
-    uint8_t* _horizKernel = (uint8_t*)malloc( kSize * sizeof(uint8_t));
-    _verKernel[0] = 1;
-    _verKernel[1] = 2;
-    _verKernel[2] = 1;
+// Vertical convolution using NEON
+void vertConvol_NEON(double **_inputImageMat, int **_outputImageMat, double *_kernel, int w, int h, int kSize, int _pFlag) {
+    int kHalfSize = kSize / 2;
 
-    _horizKernel[0] = 1;
-    _horizKernel[1] = 2;
-    _horizKernel[2] = 1;
+    // Zero-Padding case
+    if (_pFlag == 0) {
+        for (int j = 0; j < w; j++) {
+            for (int i = 0; i < h; i += 4) {
+                float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0);
+                float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
 
+                for (int k = -kHalfSize; k <= kHalfSize; k++) {
+                    int tmpPos = i + k;
 
-    // Apply the convolution on both axis
-    convolve_horizontal_avx(input, _intBuf, _horizKernel, w, h,3);
-    convolve_vertical_avx(_intBuf, output, _verKernel, w, h, 3);
+                    float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
+                    float64x2_t inputVal1, inputVal2;
 
-    // Free intermediate buffer
-    if(_intBuf) {
-        free(_intBuf);
-    }
+                    if (tmpPos >= 0 && tmpPos < h) {
+                        inputVal1 = vld1q_f64(&_inputImageMat[tmpPos][j]);
+                        inputVal2 = vld1q_f64(&_inputImageMat[tmpPos + 2][j]);
+                    } else {
+                        inputVal1 = vdupq_n_f64(0.0);
+                        inputVal2 = vdupq_n_f64(0.0);
+                    }
 
-    // Free vertical kernel
-    if(_verKernel) {
-        free(_verKernel);
-    }
+                    tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1);
+                    tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2);
+                }
 
-    // Free horizontal kernel
-    if(_horizKernel) {
-        free(_horizKernel);
+                // Store results
+                _outputImageMat[i][j] = (int)vgetq_lane_f64(tmpPxlVal1, 0);
+                if (i + 1 < h) _outputImageMat[i + 1][j] = (int)vgetq_lane_f64(tmpPxlVal1, 1);
+                if (i + 2 < h) _outputImageMat[i + 2][j] = (int)vgetq_lane_f64(tmpPxlVal2, 0);
+                if (i + 3 < h) _outputImageMat[i + 3][j] = (int)vgetq_lane_f64(tmpPxlVal2, 1);
+            }
+        }
+    } 
+    // Replicate-Padding case
+    else {
+        for (int j = 0; j < w; j++) {
+            for (int i = 0; i < h; i += 4) {
+                float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0);
+                float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
+
+                for (int k = -kHalfSize; k <= kHalfSize; k++) {
+                    int tmpPos = i + k;
+
+                    float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
+                    float64x2_t inputVal1, inputVal2;
+
+                    if (tmpPos < 0) {
+                        inputVal1 = vdupq_n_f64(_inputImageMat[0][j]);
+                        inputVal2 = inputVal1;
+                    } else if (tmpPos >= h) {
+                        inputVal1 = vdupq_n_f64(_inputImageMat[h - 1][j]);
+                        inputVal2 = inputVal1;
+                    } else {
+                        inputVal1 = vld1q_f64(&_inputImageMat[tmpPos][j]);
+                        inputVal2 = vld1q_f64(&_inputImageMat[tmpPos + 2][j]);
+                    }
+
+                    tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1);
+                    tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2);
+                }
+
+                // Store results
+                _outputImageMat[i][j] = (int)vgetq_lane_f64(tmpPxlVal1, 0);
+                if (i + 1 < h) _outputImageMat[i + 1][j] = (int)vgetq_lane_f64(tmpPxlVal1, 1);
+                if (i + 2 < h) _outputImageMat[i + 2][j] = (int)vgetq_lane_f64(tmpPxlVal2, 0);
+                if (i + 3 < h) _outputImageMat[i + 3][j] = (int)vgetq_lane_f64(tmpPxlVal2, 1);
+            }
+        }
     }
 }
-*/
+#endif
 
-// Separable convolution w/out AVX/NEON
+// Separable convolution main
 int** separable_convol(int** inputImage, double* hK, double* vK, int w, int h, int kSize, int _pFlag) {
     double **_horizConvoRes = (double**)malloc(h * sizeof(double*));
     for (int i = 0; i < h; i++) {
@@ -362,9 +489,33 @@ int** separable_convol(int** inputImage, double* hK, double* vK, int w, int h, i
         _finalConvoRes[i] = (int*)malloc(w * sizeof(int));
     }
 
-    // Apply convolution on each axis
-    basic_horizConvol(inputImage, _horizConvoRes, hK, w, h, kSize, _pFlag);
-    basic_vertConvol(_horizConvoRes, _finalConvoRes, vK, w, h, kSize, _pFlag);
+    int useSIMD = 0;
+
+    #ifdef __AVX__
+    if (__builtin_cpu_supports("avx")) {
+        useSIMD = 1;  // AVX is supported
+    }
+    #elif defined(__ARM_NEON)
+    if(getauxval(AT_HWCAP) & HWCAP_NEON) {
+        useSIMD = 1;  // NEON is supported
+    }
+    #endif
+
+    // Apply convolution based on availability of SIMD
+    if (useSIMD) {
+        // Use AVX/NEON-optimized methods
+        #ifdef __AVX__
+            horizConvol_AVX(inputImage, _horizConvoRes, hK, w, h, kSize, _pFlag);
+            vertConvol_AVX(_horizConvoRes, _finalConvoRes, vK, w, h, kSize, _pFlag);
+        #elif defined(__ARM_NEON)
+            horizConvol_NEON(inputImage, _horizConvoRes, hK, w, h, kSize, _pFlag);
+            vertConvol_NEON(_horizConvoRes, _finalConvoRes, vK, w, h, kSize, _pFlag);
+        #endif
+    } else {
+        // Fall back to basic method if no SIMD support is available
+        basic_horizConvol(inputImage, _horizConvoRes, hK, w, h, kSize, _pFlag);
+        basic_vertConvol(_horizConvoRes, _finalConvoRes, vK, w, h, kSize, _pFlag);
+    }
 
     // Clear interm. buffer (WILL have performance impact/boost on large amount of input data)
     for (int i = 0; i < h; i++) {

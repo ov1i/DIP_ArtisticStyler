@@ -4,7 +4,7 @@
 
 // Main function for testing
 int main() {
-    int w = 5, h = 5;
+    int w = 512, h = 512;
     int k_S = 5; 
     int pFlag = 1;
     int convoTypeFlag = 1;
@@ -14,7 +14,7 @@ int main() {
     for (int i = 0; i < h; i++) {
         input[i] = (int*)malloc(w * sizeof(int));
         for(int j = 0; j < w; j++) {
-            input[i][j] = 10;//10 * i + j * 10 + 10;  // Fill with some test data
+            input[i][j] = 255;  // Fill with some test data
         }
     }
     double **k = (double **)malloc(k_S * sizeof(double *));
@@ -76,14 +76,14 @@ int main() {
 
 
 
-    printf("\n\nOriginal TEST DATA: \n");
-    for (int i = 0; i < h; i++) {
-        for (int j = 0; j < w; j++) {
-            printf("%d ", input[i][j]);
-        }
-        printf("\n");
-    }
-    printf("\n\n\n");
+    // printf("\n\nOriginal TEST DATA: \n");
+    // for (int i = 0; i < h; i++) {
+    //     for (int j = 0; j < w; j++) {
+    //         printf("%d ", input[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    // printf("\n\n\n");
 
 
 
@@ -102,13 +102,13 @@ int main() {
 
 
 
-    printf("\n\nBasic Convo result: \n");
-    for (int i = 0; i < h; i++) {
-        for (int j = 0; j < w; j++) {
-            printf("%d ", basic_convo_res[i][j]);
-        }
-        printf("\n");
-    }
+    // printf("\n\nBasic Convo result: \n");
+    // for (int i = 0; i < h; i++) {
+    //     for (int j = 0; j < w; j++) {
+    //         printf("%d ", basic_convo_res[i][j]);
+    //     }
+    //     printf("\n");
+    // }
 
 
 
@@ -126,13 +126,13 @@ int main() {
 
 
 
-    printf("\n\nSeparated Convo result: \n");
-    for (int i = 0; i < h; i++) {
-        for (int j = 0; j < w; j++) {
-            printf("%d ", separated_convo_res[i][j]);
-        }
-        printf("\n");
-    }
+    // printf("\n\nSeparated Convo result: \n");
+    // for (int i = 0; i < h; i++) {
+    //     for (int j = 0; j < w; j++) {
+    //         printf("%d ", separated_convo_res[i][j]);
+    //     }
+    //     printf("\n");
+    // }
 
 
 

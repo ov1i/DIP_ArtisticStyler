@@ -17,7 +17,7 @@ main() {
         # gcc -c src/convol.c -lm -o src/convo_lib_obj.o # -> Static lib build
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then # Linux
             echo -e "\n...Linux detected continuing with the appropriate library compilation...\n"
-            gcc -shared -o dynamic_libs/convo_lib.so -fPIC src/convol.c -lm -mavx
+            gcc -shared -o dynamic_libs/convo_lib.so -fPIC src/convol.c -lm -mavx -mfma
         elif [[ "$OSTYPE" == "darwin"* ]]; then  # Mac OSX
             echo -e "\n...MacOS detected continuing with the appropriate library compilation...\n"
             gcc -shared -o dynamic_libs/convo_lib.so -fPIC src/convol.c -lm
@@ -45,7 +45,7 @@ main() {
 
         # gcc -g -lm -mavx -o tests/convo_lib_obj.o src/convol.c
         echo -e "COMPILE of convolution lib STARTED\n.."
-        gcc -c src/convol.c -g -lm -o tests/convo_lib_obj.o
+        gcc -c src/convol.c -g -lm -mavx -mfma -o tests/convo_lib_obj.o
         if [ $? -ne 0 ]; then
             echo -e "\n\nFailed to compile the library. Exiting with result -1.\n\n"
             exit -1

@@ -99,21 +99,49 @@ def create_main_interface():
             sg.Button("Enhancing", button_color=("black", "pink")),
             sg.Button("Transfer style", button_color=("black", "pink")),
         ],
+       [
+        sg.Text("Kernel Size:", size=(12, 1), background_color=BACKGROUND_COLOR),
+        sg.Slider(
+            range=(1, 11),
+            default_value=5,
+            resolution=1,
+            orientation="h",
+            key="-KERNEL_SIZE-",
+            background_color=BACKGROUND_COLOR,
+        ),
+       ],
         [
-            sg.Text("Kernel Size:", background_color=BACKGROUND_COLOR),
-            sg.Slider(range=(1, 11), default_value=5, resolution=1, orientation='h', key="-KERNEL_SIZE-", background_color=BACKGROUND_COLOR),
-        ],
-         [
-            sg.Text("Sigma:", background_color=BACKGROUND_COLOR),
-            sg.Slider(range=(0.1, 5.0), default_value=1.0, resolution=0.1, orientation='h', key="-SIGMA-", background_color=BACKGROUND_COLOR),
+        sg.Text("Sigma:", size=(12, 1), background_color=BACKGROUND_COLOR),
+        sg.Slider(
+            range=(0.1, 5.0),
+            default_value=1.0,
+            resolution=0.1,
+            orientation="h",
+            key="-SIGMA-",
+            background_color=BACKGROUND_COLOR,
+        ),
         ],
         [
-            sg.Text("Weight (w):", background_color=BACKGROUND_COLOR),
-            sg.Slider(range=(0.1, 1.0), default_value=0.6, resolution=0.1, orientation='h', key="-WEIGHT-", background_color=BACKGROUND_COLOR),
+        sg.Text("Weight (w):", size=(12, 1), background_color=BACKGROUND_COLOR),
+        sg.Slider(
+            range=(0.1, 1.0),
+            default_value=0.6,
+            resolution=0.1,
+            orientation="h",
+            key="-WEIGHT-",
+            background_color=BACKGROUND_COLOR,
+        ),
         ],
-         [
-            sg.Text("Padding Flag:", background_color=BACKGROUND_COLOR),
-            sg.Slider(range=(0, 1), default_value=1, resolution=1, orientation='h', key="-PADDING_FLAG-", background_color=BACKGROUND_COLOR),
+        [
+        sg.Text("Padding Flag:", size=(12, 1), background_color=BACKGROUND_COLOR),
+        sg.Slider(
+            range=(0, 1),
+            default_value=1,
+            resolution=1,
+            orientation="h",
+            key="-PADDING_FLAG-",
+            background_color=BACKGROUND_COLOR,
+        ),
         ],
 
         [
@@ -221,10 +249,10 @@ def main():
                 update_globals(values)
                 initial_array = np.array(initial_image)
                 style_array = np.array(style_image)
-                initial_lab = bgr_rgb_to_lab(initial_array)
-                style_lab = bgr_rgb_to_lab(style_array)
+                initial_lab = bgr_rgb_to_lab(initial_array, 0)
+                style_lab = bgr_rgb_to_lab(style_array, 0)
                 matched_lab = match_colors(initial_lab, style_lab)
-                matched_bgr = lab_to_bgr_rgb(matched_lab, 1)
+                matched_bgr = lab_to_bgr_rgb(matched_lab, 0)
                 result_pil = Image.fromarray(matched_bgr.astype("uint8"))
                 open_and_resize_image(result_pil, window, "-RESULT_IMAGE-")
             except Exception as e:
@@ -238,10 +266,10 @@ def main():
                 update_globals(values)
                 initial_array = np.array(initial_image)
                 style_array = np.array(style_image)
-                initial_lab = bgr_rgb_to_lab(initial_array)
-                style_lab = bgr_rgb_to_lab(style_array)
+                initial_lab = bgr_rgb_to_lab(initial_array, 0)
+                style_lab = bgr_rgb_to_lab(style_array, 0)
                 matched_lab = match_colors(initial_lab, style_lab)
-                matched_bgr = lab_to_bgr_rgb(matched_lab, 1)
+                matched_bgr = lab_to_bgr_rgb(matched_lab, 0)
                 result_image = edge_enhancement_wrapper(matched_bgr)
                 result_pil = Image.fromarray(result_image.astype("uint8"))
                 open_and_resize_image(result_pil, window, "-RESULT_IMAGE-")
@@ -258,14 +286,14 @@ def main():
                     default_values()
                 initial_array = np.array(initial_image)
                 style_array = np.array(style_image)
-                initial_lab = bgr_rgb_to_lab(initial_array)
-                style_lab = bgr_rgb_to_lab(style_array)
+                initial_lab = bgr_rgb_to_lab(initial_array, 0)
+                style_lab = bgr_rgb_to_lab(style_array, 0)
                 matched_lab = match_colors(initial_lab, style_lab)
-                matched_bgr = lab_to_bgr_rgb(matched_lab, 1)
+                matched_bgr = lab_to_bgr_rgb(matched_lab, 0)
                 enh_image = edge_enhancement_wrapper(matched_bgr)
-                enh_image_lab = bgr_rgb_to_lab(enh_image)
+                enh_image_lab = bgr_rgb_to_lab(enh_image, 0)
                 result_image_lab = feature_fusion_wrapper(enh_image_lab, style_lab)
-                result_image = lab_to_bgr_rgb(result_image_lab, 1)
+                result_image = lab_to_bgr_rgb(result_image_lab, 0)
                 result_pil = Image.fromarray(result_image.astype("uint8"))
                 open_and_resize_image(result_pil, window, "-RESULT_IMAGE-")
                 

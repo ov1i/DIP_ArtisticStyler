@@ -20,7 +20,7 @@ main() {
             gcc -shared -o dynamic_libs/convo_lib.so -fPIC src/convol.c -lm -mavx -mfma
         elif [[ "$OSTYPE" == "darwin"* ]]; then  # Mac OSX
             echo -e "\n...MacOS detected continuing with the appropriate library compilation...\n"
-            gcc -shared -o dynamic_libs/convo_lib.dylib  -fPIC src/convol.c -lm
+            gcc -shared -o dynamic_libs/convo_lib.dylib -fPIC src/convol.c -lm
         else 
             echo -e "\nNo specific OS found continuing with default library compilation!\n"
             gcc -shared -o dynamic_libs/convo_lib -fPIC src/convol.c -lm

@@ -15,7 +15,7 @@ print("\n\n:::::::::SCRIPT RUNNING:::::::::\n\n")
 initial_img = cv2.imread("res/source/targets/t1.jpg")
 initial_img = cv2.resize(initial_img, (512, 512))
 
-painting_img = cv2.imread("res/source/paintings/p3.jpg")
+painting_img = cv2.imread("res/source/paintings/p5.jpg")
 painting_img = cv2.resize(painting_img, (512, 512))
 
 if(initial_img is None):
@@ -39,7 +39,7 @@ enhanced_img_lab = cc.bgr_rgb_to_lab(enhanced_img)
 brush_pic_LAB, roi_coords = genBrushPatterns(painting_img_lab[:,:,0])
 brush_pic = painting_img[roi_coords[0]:roi_coords[0] + 128, roi_coords[1]:roi_coords[1] + 128]
 
-res_LAB = feature_fusion_wrapper(enhanced_img_lab, painting_img_lab, 1)
+res_LAB = feature_fusion_wrapper(enhanced_img_lab, painting_img_lab, 0.6)
 res_BGR = cc.lab_to_bgr_rgb(res_LAB, 1)
 
 cv2.imshow("Original Image(Target)", initial_img)
@@ -48,6 +48,7 @@ cv2.imshow("Original Image(Source)", painting_img)
 # cv2.imshow("Test Algo s2", enhanced_img)
 # cv2.imshow("Test Algo s3", brush_pic)
 cv2.imshow("Test Algo s4", res_BGR)
+# cv2.imwrite("res/results/final_results/res_1_5.png",res_BGR)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 

@@ -1,0 +1,66 @@
+
+
+::Build script will continue...::
+
+
+::Testing scope is ON::
+
+COMPILE of convolution lib STARTED
+..
+COMPILE of convolution lib FINISHED 
+
+
+::Library build started::
+..
+::Library built successfully::
+
+
+::Building the test program started::
+..
+
+...No specific OS detected continuing with the appropriate build...
+
+::Building the test program finished::
+
+::Executing test cases::
+
+
+
+
+::::::::Running basic convolution test::::::::
+
+
+INFO: Convolution method ->> CLASSIC <<-- (param value (0) = default)
+
+
+INFO: Used KERNEL shape ->> 2D <<- 
+
+
+
+
+::::::::Algo took 0.024625s to finalize::::::::
+
+
+
+
+::::::::Running separated convolution test::::::::
+
+
+INFO: Convolution method ->> SEPARATED <<-- (param value (1))
+
+
+INFO: Used KERNEL shape ->> 1D <<- 
+
+
+
+
+::::::::Algo took 0.011706s to finalize::::::::
+
+::Execution of test cases finished::
+
+::Testing scope is OFF::
+
+
+::Build script finished executing...Exiting with result 1::
+
+

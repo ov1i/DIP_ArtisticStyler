@@ -1,6 +1,6 @@
 @echo off
 setlocal
-
+goto :start
 rem Function to update deps, install python3-venv and ensure pip is installed
 :install_venv
 echo Updating dependencies and installing Python 3 and pip...
@@ -28,7 +28,7 @@ IF ERRORLEVEL 1 (
 exit /b
 
 :main
-set "env_name=venv"
+set "env_name=.venv"
 
 call :install_venv
 
@@ -54,5 +54,6 @@ if exist "dependencies\requirements.txt" (
 endlocal
 exit /b
 
+:start
 rem Call the main function
 call :main

@@ -6,7 +6,8 @@ import numpy as np
 from src.color_matching.cm import match_colors
 from src.conversion.color_space_conversions import *
 from src.feature_fusion.edge_enhancement import edge_enhancement_wrapper
-
+from src.feature_fusion.spectrum_extractor import feature_fusion_wrapper
+from src.types.defines import global_vars
 
 # Function to select a file
 def select_file():
@@ -26,6 +27,13 @@ def select_file():
             file_types=(("Image Files", "*.png;*.jpg;*.jpeg;*.bmp"),),
             no_window=True
         )
+    
+def update_globals(values):
+    global global_vars
+    global_vars["kernel_size"] = int(values["-KERNEL_SIZE-"])
+    global_vars["sigma"] = float(values["-SIGMA-"])
+    global_vars["weight"] = float(values["-WEIGHT-"])
+    global_vars["padding_flag"] = int(values["-PADDING_FLAG-"])
 
 
 # Function to open and resize an image
@@ -75,15 +83,32 @@ def create_main_interface():
         [
             sg.Button("Open Initial Image", button_color=("black", "pink")),
             sg.Button("Open Style Image", button_color=("black", "pink")),
+            sg.Push(background_color=BACKGROUND_COLOR),
             sg.Button("Back to Home Menu", button_color=("black", "pink")),
-            sg.Button("Exit", button_color=("black", "pink")),
+            
         ],
         [
-            sg.Button("Transfer Style", button_color=("black", "pink")),
-            sg.Button("Save Result", button_color=("black", "pink")),
-            sg.Button("Reset Images", button_color=("black", "pink")),
-            sg.Button("Settings", button_color=("black", "pink")),
+            sg.Button("Color matching", button_color=("black", "pink")),
+            sg.Button("Enhancing", button_color=("black", "pink")),
+            sg.Button("Transfer style", button_color=("black", "pink")),
         ],
+        [
+            sg.Text("Kernel Size:", background_color=BACKGROUND_COLOR),
+            sg.Slider(range=(1, 11), default_value=5, resolution=1, orientation='h', key="-KERNEL_SIZE-", background_color=BACKGROUND_COLOR),
+        ],
+         [
+            sg.Text("Sigma:", background_color=BACKGROUND_COLOR),
+            sg.Slider(range=(0.1, 5.0), default_value=1.0, resolution=0.1, orientation='h', key="-SIGMA-", background_color=BACKGROUND_COLOR),
+        ],
+        [
+            sg.Text("Weight (w):", background_color=BACKGROUND_COLOR),
+            sg.Slider(range=(0.1, 1.0), default_value=0.6, resolution=0.1, orientation='h', key="-WEIGHT-", background_color=BACKGROUND_COLOR),
+        ],
+         [
+            sg.Text("Padding Flag:", background_color=BACKGROUND_COLOR),
+            sg.Slider(range=(0, 1), default_value=1, resolution=1, orientation='h', key="-PADDING_FLAG-", background_color=BACKGROUND_COLOR),
+        ],
+
         [
             sg.Column(
                 [[sg.Image(key="-INITIAL_IMAGE-", background_color=BACKGROUND_COLOR, expand_x=True, expand_y=True)]],
@@ -137,11 +162,29 @@ def main():
             if filepath:
                 style_image = open_and_resize_image(filepath, window, "-STYLE_IMAGE-")
 
-        elif event == "Transfer Style":
+        elif event == "Color matching":
             if not initial_image or not style_image:
-                sg.popup_error("Please load both images before transferring style.")
+                sg.popup_error("Please load both images before color.")
                 continue
             try:
+                update_globals(values)
+                initial_array = np.array(initial_image)
+                style_array = np.array(style_image)
+                initial_lab = bgr_rgb_to_lab(initial_array)
+                style_lab = bgr_rgb_to_lab(style_array)
+                matched_lab = match_colors(initial_lab, style_lab)
+                matched_bgr = lab_to_bgr_rgb(matched_lab, 1)
+                result_pil = Image.fromarray(matched_bgr.astype("uint8"))
+                open_and_resize_image(result_pil, window, "-RESULT_IMAGE-")
+            except Exception as e:
+                sg.popup_error(f"Error during color matching: {e}")
+
+        elif event == "Enhancing":
+            if not initial_image or not style_image:
+                sg.popup_error("Please load both images before color.")
+                continue
+            try:
+                update_globals(values)
                 initial_array = np.array(initial_image)
                 style_array = np.array(style_image)
                 initial_lab = bgr_rgb_to_lab(initial_array)
@@ -152,10 +195,29 @@ def main():
                 result_pil = Image.fromarray(result_image.astype("uint8"))
                 open_and_resize_image(result_pil, window, "-RESULT_IMAGE-")
             except Exception as e:
-                sg.popup_error(f"Error during style transfer: {e}")
+                sg.popup_error(f"Error during enhancing: {e}")
+        elif event == "Transfer style":
+            if not initial_image or not style_image:
+                sg.popup_error("Please load both images before color.")
+                continue
+            try:
+                update_globals(values)
+                initial_array = np.array(initial_image)
+                style_array = np.array(style_image)
+                initial_lab = bgr_rgb_to_lab(initial_array)
+                style_lab = bgr_rgb_to_lab(style_array)
+                matched_lab = match_colors(initial_lab, style_lab)
+                matched_bgr = lab_to_bgr_rgb(matched_lab, 1)
+                enh_image = edge_enhancement_wrapper(matched_bgr)
+                enh_image_lab = bgr_rgb_to_lab(enh_image)
+                result_image_lab = feature_fusion_wrapper(enh_image_lab, style_lab)
+                result_image = lab_to_bgr_rgb(result_image_lab, 1)
+                result_pil = Image.fromarray(result_image.astype("uint8"))
+                open_and_resize_image(result_pil, window, "-RESULT_IMAGE-")
+                
 
-        elif event == "Save Result":
-            sg.popup("Feature to save the result is not yet implemented.")
+            except Exception as e:
+                sg.popup_error(f"Error during style transfer: {e}")
 
         elif event == "Reset Images":
             initial_image = None

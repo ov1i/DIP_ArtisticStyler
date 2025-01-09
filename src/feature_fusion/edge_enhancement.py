@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import scipy.signal as sp
 import src.feature_fusion.generators as g
+from src.types.defines import global_vars
 import ctypes
 import platform
 import os
@@ -39,15 +40,14 @@ def setup_c_lib():
 
     return convol_c
 
-def edge_enhancement(src, w, blurred):
-    E = (src - w * blurred) / (1 - w)
+def edge_enhancement(src, blurred):
+    E = (src - global_vars["weight"] * blurred) / (1 - global_vars["weight"])
 
     E = np.clip(E, 0, 255).astype(np.uint8)
 
     return E
 
 def edge_enhancement_wrapper(src):
-    k_Size, sigma = 5, 1 # kernel generator params
     ch_0, ch_1, ch_2 = cv2.split(src)
     imHeight, imWidth, imCh = src.shape
 
@@ -55,19 +55,22 @@ def edge_enhancement_wrapper(src):
     imgDPack_ch0, imgDPack_ch1, imgDPack_ch2 = t_imageDPack(), t_imageDPack(), t_imageDPack()
     kDPack = t_kernelDPack()
 
-    k2D=g.GK_generator(k_Size, sigma)
-    
-    my_convol = setup_c_lib()
-    
-    cLib_flag = 1
+    k2D=g.GK_generator(1)
 
+    try:
+        my_convol = setup_c_lib()
+        cLib_flag = 1
+    except: 
+        print("Warning: Failed to load the dynamic library")    
+        my_convol = None
+  
     if(my_convol == None):
         print("Warning: C created lib failed to set up due to internal errors!\n\n")
         print("Continuing with scipy built in convolution function")
         cLib_flag = 0
 
     if(np.isclose(np.linalg.matrix_rank(k2D), 1, atol=.5)):
-        k_horiz, k_vert = g.GK_separator(k2D, k_Size)
+        k_horiz, k_vert = g.GK_separator(k2D)
         
         k_reconstr = np.outer(k_horiz, k_vert)
         if(k_reconstr.all() == k2D.all()):
@@ -108,12 +111,12 @@ def edge_enhancement_wrapper(src):
         imgDPack_ch2.width = ctypes.c_int(imWidth)
         imgDPack_ch2.height = ctypes.c_int(imHeight)
 
-        kDPack._kernel2D = (ctypes.POINTER(ctypes.c_double) * k_Size)(*[kRow.ctypes.data_as(ctypes.POINTER(ctypes.c_double)) for kRow in k2D])
+        kDPack._kernel2D = (ctypes.POINTER(ctypes.c_double) * global_vars["kernel_size"])(*[kRow.ctypes.data_as(ctypes.POINTER(ctypes.c_double)) for kRow in k2D])
         kDPack._kernelHorizontal = k_horiz.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
         kDPack._kernelVertical = k_vert.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
-        kDPack.kernelSize = ctypes.c_int(k_Size)
+        kDPack.kernelSize = ctypes.c_int(global_vars["kernel_size"])
         
-        fDPack._paddingFlag = ctypes.c_int(1) # 1 -replicate-padding | 0 - zero-padding
+        fDPack._paddingFlag = ctypes.c_int(global_vars["padding_flag"]) # 1 -replicate-padding | 0 - zero-padding
         fDPack._convoTypeFlag = ctypes.c_int(1) # 1 - separated convolution | 0 - basic convolution
 
         packed_img_ch0 = my_convol(imgDPack_ch0, kDPack, fDPack)
@@ -156,7 +159,7 @@ def edge_enhancement_wrapper(src):
             
             blurred_img = cv2.merge([blurred_img_ch0, blurred_img_ch1, blurred_img_ch2]).astype(np.float32)
 
-    enhanced_img=edge_enhancement(src, 0.6, blurred_img)
+    enhanced_img=edge_enhancement(src, blurred_img)
 
     enhanced_img = np.clip(enhanced_img, 0, 255).astype(np.uint8)
 

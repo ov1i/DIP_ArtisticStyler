@@ -35,6 +35,13 @@ def update_globals(values):
     global_vars["weight"] = float(values["-WEIGHT-"])
     global_vars["padding_flag"] = int(values["-PADDING_FLAG-"])
 
+def default_values():
+    global global_vars
+    global_vars["kernel_size"] = 5
+    global_vars["sigma"] = 1
+    global_vars["weight"] = 0.6
+    global_vars["padding_flag"] = 1
+
 
 # Function to open and resize an image
 def open_and_resize_image(filepath_or_pil_image, window, image_key, target_size=None):
@@ -132,6 +139,44 @@ def create_main_interface():
     ]
     return sg.Window("Image Style Transfer", layout, background_color=BACKGROUND_COLOR, resizable=True, size=(1500, 900), finalize=True)
 
+def create_direct_interface():
+    BACKGROUND_COLOR = "#FFB6C1"
+    layout = [
+        [
+            sg.Button("Open Initial Image", button_color=("black", "pink")),
+            sg.Button("Open Style Image", button_color=("black", "pink")),
+            sg.Push(background_color=BACKGROUND_COLOR),
+            sg.Button("Back to Home Menu", button_color=("black", "pink")),
+            
+        ],
+        [
+        
+            sg.Button("Transfer style", button_color=("black", "pink")),
+        ],
+        [
+            sg.Column(
+                [[sg.Image(key="-INITIAL_IMAGE-", background_color=BACKGROUND_COLOR, expand_x=True, expand_y=True)]],
+                background_color=BACKGROUND_COLOR,
+                expand_x=True,
+                expand_y=True,
+            ),
+            sg.Column(
+                [[sg.Image(key="-STYLE_IMAGE-", background_color=BACKGROUND_COLOR, expand_x=True, expand_y=True)]],
+                background_color=BACKGROUND_COLOR,
+                expand_x=True,
+                expand_y=True,
+            ),
+            sg.Column(
+                [[sg.Image(key="-RESULT_IMAGE-", background_color=BACKGROUND_COLOR, expand_x=True, expand_y=True)]],
+                background_color=BACKGROUND_COLOR,
+                expand_x=True,
+                expand_y=True,
+            ),
+        ],
+    ]
+    return sg.Window("Image Style Transfer", layout, background_color=BACKGROUND_COLOR, resizable=True, size=(1500, 900), finalize=True)
+
+
 
 # Main Function to Run the GUI
 def main():
@@ -146,12 +191,18 @@ def main():
 
         if event == "Step-by-Step Algo":
             window.close()
+            method = 0
             window = create_main_interface()
 
         elif event == "Back to Home Menu":
             window.close()
             window = create_home_menu()
 
+        elif event == "Direct Result":
+            window.close()
+            method = 1
+            window = create_direct_interface()
+            
         elif event == "Open Initial Image":
             filepath = select_file()
             if filepath:
@@ -201,7 +252,10 @@ def main():
                 sg.popup_error("Please load both images before color.")
                 continue
             try:
-                update_globals(values)
+                if method == 0:
+                    update_globals(values)
+                else:
+                    default_values()
                 initial_array = np.array(initial_image)
                 style_array = np.array(style_image)
                 initial_lab = bgr_rgb_to_lab(initial_array)
@@ -215,7 +269,6 @@ def main():
                 result_pil = Image.fromarray(result_image.astype("uint8"))
                 open_and_resize_image(result_pil, window, "-RESULT_IMAGE-")
                 
-
             except Exception as e:
                 sg.popup_error(f"Error during style transfer: {e}")
 
@@ -230,3 +283,4 @@ def main():
             sg.popup("Settings feature is under development.")
 
     window.close()
+    

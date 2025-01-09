@@ -496,9 +496,13 @@ int** separable_convol(int** inputImage, double* hK, double* vK, int w, int h, i
         useSIMD = 1;  // AVX is supported
     }
     #elif defined(__ARM_NEON)
-    if(getauxval(AT_HWCAP) & HWCAP_NEON) {
-        useSIMD = 1;  // NEON is supported
+    char buffer[256];
+    size_t buffer_size = sizeof(buffer);
+
+    if (sysctlbyname("hw.optional.neon", &buffer, &buffer_size, NULL, 0) == 0) {
+        useSIMD = 1; // NEON is supported
     }
+
     #endif
 
     // Apply convolution based on availability of SIMD

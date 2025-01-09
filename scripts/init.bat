@@ -37,6 +37,9 @@ echo Creating the virtual environment...
 python -m venv "%env_name%"
 echo Virtual environment "%env_name%" created successfully.
 
+rem Mark the newly created virtual enviroment as a hidden directory
+attrib +h .venv
+
 rem Activate the virtual environment
 echo Activating the virtual environment...
 call "%env_name%\Scripts\activate.bat"

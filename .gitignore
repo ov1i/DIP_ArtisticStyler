@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 
 # C extensions
-# *.so
+
 
 .DS_Store
 
@@ -52,6 +52,10 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+
+# GCC
+*.a
+*.o
 
 # Translations
 *.mo

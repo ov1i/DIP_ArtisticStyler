@@ -3,9 +3,9 @@ import platform
 import os
 
 if platform.system() == 'Windows':
-    testerLIB = ctypes.CDLL(os.path.abspath('lib/convo_lib.dll'))
+    testerLIB = ctypes.CDLL(os.path.abspath('dynamic_libs/convo_lib.dll'))
 else:
-    testerLIB = ctypes.CDLL(os.path.abspath('lib/convo_lib.so'))
+    testerLIB = ctypes.CDLL(os.path.abspath('dynamic_libs/convo_lib.so'))
 
 # Section test functions
 mockSumFc = testerLIB.mockSum

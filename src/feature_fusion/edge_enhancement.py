@@ -27,9 +27,9 @@ class t_flagsDPack(ctypes.Structure):
 
 def setup_c_lib():
     if platform.system() == 'Windows':
-        c_lib = ctypes.CDLL(os.path.abspath(os.path.join(os.getcwd(), 'src/optimz/lib/convo_lib.dll')))
+        c_lib = ctypes.CDLL(os.path.abspath(os.path.join(os.getcwd(), 'src/optimz/dynamic_libs/convo_lib.dll')))
     else:
-        c_lib = ctypes.CDLL(os.path.abspath(os.path.join(os.getcwd(), 'src/optimz/lib/convo_lib.so')))
+        c_lib = ctypes.CDLL(os.path.abspath(os.path.join(os.getcwd(), 'src/optimz/dynamic_libs/convo_lib.so')))
     
     # Section C convolution wrapper
     convol_c = c_lib.covolveWrapper
@@ -39,16 +39,15 @@ def setup_c_lib():
 
     return convol_c
 
-def edge_enhancement(src, w, prc_img):
-    prc_img*=w
-    src-=prc_img
-    w=1-w
+def edge_enhancement(src, w, blurred):
+    E = (src - w * blurred) / (1 - w)
 
-    return src/w
+    E = np.clip(E, 0, 255).astype(np.uint8)
+
+    return E
 
 def edge_enhancement_wrapper(src):
     k_Size, sigma = 5, 1 # kernel generator params
-
     ch_0, ch_1, ch_2 = cv2.split(src)
     imHeight, imWidth, imCh = src.shape
 
@@ -60,24 +59,24 @@ def edge_enhancement_wrapper(src):
     
     my_convol = setup_c_lib()
     
-    clib_statu_flag = 1
+    cLib_flag = 1
 
     if(my_convol == None):
         print("Warning: C created lib failed to set up due to internal errors!\n\n")
         print("Continuing with scipy built in convolution function")
-        clib_statu_flag = 0
+        cLib_flag = 0
 
     if(np.isclose(np.linalg.matrix_rank(k2D), 1, atol=.5)):
         k_horiz, k_vert = g.GK_separator(k2D, k_Size)
         
         k_reconstr = np.outer(k_horiz, k_vert)
         if(k_reconstr.all() == k2D.all()):
-            print("\n\nKernel separated succesfully without error\n\n")
+            print("\n\nKernel separated succesfully!\n\n")
         else:
-            print("\n\nKernel separated succesfully but has some error\n\n")
+            print("\n\nKernel separation error occured!\n\n")
 
 
-    if(clib_statu_flag == 0):
+    if(cLib_flag == 0):
         blurred_img_ch0 = sp.convolve2d(src[:,:,0], k2D, boundary='symm', mode='same')
         blurred_img_ch1 = sp.convolve2d(src[:,:,1], k2D, boundary='symm', mode='same')
         blurred_img_ch2 = sp.convolve2d(src[:,:,2], k2D, boundary='symm', mode='same')
@@ -85,7 +84,6 @@ def edge_enhancement_wrapper(src):
         blurred_img = cv2.merge([blurred_img_ch0, blurred_img_ch1, blurred_img_ch2]).astype(np.float32)
     else:
         # Pack input data for C written convolution
-
         ch0_int32 = ch_0.astype(np.int32)
         ch0_int32_ptr = (ctypes.POINTER(ctypes.c_int) * imHeight)()
         for i in range(imHeight):
@@ -120,7 +118,7 @@ def edge_enhancement_wrapper(src):
 
         packed_img_ch0 = my_convol(imgDPack_ch0, kDPack, fDPack)
         packed_img_ch1 = my_convol(imgDPack_ch1, kDPack, fDPack)
-        packed_img_ch2 = my_convol(imgDPack_ch1, kDPack, fDPack)
+        packed_img_ch2 = my_convol(imgDPack_ch2, kDPack, fDPack)
 
         unpacked_img_ch0, unpacked_img_ch1, unpacked_img_ch2 = [],[],[]
         for i in range(imHeight):
@@ -137,17 +135,17 @@ def edge_enhancement_wrapper(src):
             unpacked_img_ch2.append(rdata_ch2)
 
         # uint8(int)
-        # ch0_res = np.array(unpacked_img_ch0, dtype=np.uint8)
-        # ch1_res = np.array(unpacked_img_ch1, dtype=np.uint8)
-        # ch2_res = np.array(unpacked_img_ch2, dtype=np.uint8)
+        ch0_res = np.array(unpacked_img_ch0, dtype=np.uint8)
+        ch1_res = np.array(unpacked_img_ch1, dtype=np.uint8)
+        ch2_res = np.array(unpacked_img_ch2, dtype=np.uint8)
 
+        # float32(float)
+        # ch0_res = np.array(unpacked_img_ch0, dtype=np.float32)
+        # ch1_res = np.array(unpacked_img_ch1, dtype=np.float32)
+        # ch2_res = np.array(unpacked_img_ch2, dtype=np.float32)
 
-        # float32(double)
-        ch0_res = np.array(unpacked_img_ch0, dtype=np.float32)
-        ch1_res = np.array(unpacked_img_ch1, dtype=np.float32)
-        ch2_res = np.array(unpacked_img_ch2, dtype=np.float32)
+        blurred_img = cv2.merge([ch0_res, ch1_res, ch2_res])
 
-        blurred_img = cv2.merge([ch0_res, ch1_res, ch2_res]).astype(np.float32)
         if(blurred_img.any() == None):
             print("Warning: C created lib failed to perform the convolution\n")
             print("Continuing with scipy built in convolution function\n\n")
@@ -157,8 +155,8 @@ def edge_enhancement_wrapper(src):
             blurred_img_ch2 = sp.convolve2d(src[:,:,2], k2D, boundary='symm', mode='same')
             
             blurred_img = cv2.merge([blurred_img_ch0, blurred_img_ch1, blurred_img_ch2]).astype(np.float32)
-    
-    enhanced_img=edge_enhancement(src.astype(np.float32), 0.6, blurred_img)
+
+    enhanced_img=edge_enhancement(src, 0.6, blurred_img)
 
     enhanced_img = np.clip(enhanced_img, 0, 255).astype(np.uint8)
 

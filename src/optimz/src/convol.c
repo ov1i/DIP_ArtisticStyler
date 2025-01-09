@@ -330,148 +330,143 @@ void vertConvol_AVX(double **_inputImageMat, int **_outputImageMat, double *_ker
 
 #ifdef __ARM_NEON
 // Horizontal convolution using NEON
-void horizConvol_NEON(int **_inputImageMat, double **_outputImageMat, double *_kernel, int w, int h, int kSize, int _pFlag) {
+void horizConvol_NEON(int **_inputImageMat, double **_outputImageMat, double *_kernel, int w, int h, int kSize) {
     int kHalfSize = kSize / 2;
 
-    // Zero-Padding case
-    if (_pFlag == 0) {
-        for (int i = 0; i < h; i++) {
-            for (int j = 0; j < w; j += 4) {
-                float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0);
-                float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
+    // Parallelize rows if desired
+    for (int i = 0; i < h; i++) {
+        for (int j = 0; j < w; j += 4) {
+            float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0); // Initialize Neon registers to 0
+            float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
 
-                for (int k = -kHalfSize; k <= kHalfSize; k++) {
-                    int tmpPos = j + k;
+            for (int k = -kHalfSize; k <= kHalfSize; k++) {
+                int tmpPos = j + k;
 
-                    float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
-                    float64x2_t inputVal1, inputVal2;
+                float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
 
-                    if (tmpPos >= 0 && tmpPos < w) {
-                        inputVal1 = vld1q_f64((double *)&_inputImageMat[i][tmpPos]);
-                        inputVal2 = vld1q_f64((double *)&_inputImageMat[i][tmpPos + 2]);
-                    } else {
-                        inputVal1 = vdupq_n_f64(0.0);
-                        inputVal2 = vdupq_n_f64(0.0);
+                float64x2_t inputVal1, inputVal2;
+
+                if (tmpPos >= 0 && tmpPos + 3 < w) {
+                    // Aligned access for the input matrix
+                    double temp1[2] = {
+                        (double)_inputImageMat[i][tmpPos],
+                        (double)_inputImageMat[i][tmpPos + 1]};
+                    double temp2[2] = {
+                        (double)_inputImageMat[i][tmpPos + 2],
+                        (double)_inputImageMat[i][tmpPos + 3]};
+
+                    inputVal1 = vld1q_f64(temp1);
+                    inputVal2 = vld1q_f64(temp2);
+
+                } else {
+                    // Handle edge cases with zero-padding
+                    double padded1[2] = {0.0, 0.0};
+                    double padded2[2] = {0.0, 0.0};
+
+                    for (int idx = 0; idx < 2; idx++) {
+                        int pos = tmpPos + idx;
+                        if (pos >= 0 && pos < w) {
+                            padded1[idx] = (double)_inputImageMat[i][pos];
+                        }
                     }
 
-                    tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1);
-                    tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2);
-                }
-
-                // Store results
-                vst1q_f64(&_outputImageMat[i][j], tmpPxlVal1);
-                vst1q_f64(&_outputImageMat[i][j + 2], tmpPxlVal2);
-            }
-        }
-    } 
-    // Replicate-Padding case
-    else {
-        for (int i = 0; i < h; i++) {
-            for (int j = 0; j < w; j += 4) {
-                float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0);
-                float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
-
-                for (int k = -kHalfSize; k <= kHalfSize; k++) {
-                    int tmpPos = j + k;
-
-                    float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
-                    float64x2_t inputVal1, inputVal2;
-
-                    if (tmpPos < 0) {
-                        inputVal1 = vld1q_f64((double *)&_inputImageMat[i][0]);
-                        inputVal2 = vld1q_f64((double *)&_inputImageMat[i][0]);
-                    } else if (tmpPos >= w) {
-                        inputVal1 = vld1q_f64((double *)&_inputImageMat[i][w - 2]);
-                        inputVal2 = vld1q_f64((double *)&_inputImageMat[i][w - 2]);
-                    } else {
-                        inputVal1 = vld1q_f64((double *)&_inputImageMat[i][tmpPos]);
-                        inputVal2 = vld1q_f64((double *)&_inputImageMat[i][tmpPos + 2]);
+                    for (int idx = 2; idx < 4; idx++) {
+                        int pos = tmpPos + idx;
+                        if (pos >= 0 && pos < w) {
+                            padded2[idx - 2] = (double)_inputImageMat[i][pos];
+                        }
                     }
 
-                    tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1);
-                    tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2);
+                    inputVal1 = vld1q_f64(padded1);
+                    inputVal2 = vld1q_f64(padded2);
                 }
 
-                // Store results
-                vst1q_f64(&_outputImageMat[i][j], tmpPxlVal1);
-                vst1q_f64(&_outputImageMat[i][j + 2], tmpPxlVal2);
+                tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1); // FMA operation
+                tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2); // FMA operation
             }
+
+            // Store the result back to the output matrix
+            double result1[2], result2[2];
+            vst1q_f64(result1, tmpPxlVal1);
+            vst1q_f64(result2, tmpPxlVal2);
+
+            _outputImageMat[i][j] = result1[0];
+            if (j + 1 < w)
+                _outputImageMat[i][j + 1] = result1[1];
+            if (j + 2 < w)
+                _outputImageMat[i][j + 2] = result2[0];
+            if (j + 3 < w)
+                _outputImageMat[i][j + 3] = result2[1];
         }
     }
 }
 
-
 // Vertical convolution using NEON
-void vertConvol_NEON(double **_inputImageMat, int **_outputImageMat, double *_kernel, int w, int h, int kSize, int _pFlag) {
+void vertConvol_NEON(double **_inputImageMat, int **_outputImageMat, double *_kernel, int w, int h, int kSize) {
     int kHalfSize = kSize / 2;
 
-    // Zero-Padding case
-    if (_pFlag == 0) {
-        for (int j = 0; j < w; j++) {
-            for (int i = 0; i < h; i += 4) {
-                float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0);
-                float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
+    for (int j = 0; j < w; j++) {
+        for (int i = 0; i < h; i += 4) {
+            float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0);
+            float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
 
-                for (int k = -kHalfSize; k <= kHalfSize; k++) {
-                    int tmpPos = i + k;
+            for (int k = -kHalfSize; k <= kHalfSize; k++) {
+                int tmpPos = i + k;
 
-                    float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
-                    float64x2_t inputVal1, inputVal2;
+                float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
 
-                    if (tmpPos >= 0 && tmpPos < h) {
-                        inputVal1 = vld1q_f64(&_inputImageMat[tmpPos][j]);
-                        inputVal2 = vld1q_f64(&_inputImageMat[tmpPos + 2][j]);
-                    } else {
-                        inputVal1 = vdupq_n_f64(0.0);
-                        inputVal2 = vdupq_n_f64(0.0);
+                float64x2_t inputVal1, inputVal2;
+
+                if (tmpPos >= 0 && tmpPos + 3 < h) {
+                    double temp1[2] = {
+                        _inputImageMat[tmpPos][j],
+                        _inputImageMat[tmpPos + 1][j]};
+                    double temp2[2] = {
+                        _inputImageMat[tmpPos + 2][j],
+                        _inputImageMat[tmpPos + 3][j]};
+
+                    inputVal1 = vld1q_f64(temp1);
+                    inputVal2 = vld1q_f64(temp2);
+                } else {
+                    // Handle edge cases with zero-padding
+                    double padded1[2] = {0.0, 0.0};
+                    double padded2[2] = {0.0, 0.0};
+
+                    for (int idx = 0; idx < 2; idx++) {
+                        int pos = tmpPos + idx;
+                        if (pos >= 0 && pos < h) {
+                            padded1[idx] = _inputImageMat[pos][j];
+                        }
                     }
 
-                    tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1);
-                    tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2);
-                }
-
-                // Store results
-                _outputImageMat[i][j] = (int)vgetq_lane_f64(tmpPxlVal1, 0);
-                if (i + 1 < h) _outputImageMat[i + 1][j] = (int)vgetq_lane_f64(tmpPxlVal1, 1);
-                if (i + 2 < h) _outputImageMat[i + 2][j] = (int)vgetq_lane_f64(tmpPxlVal2, 0);
-                if (i + 3 < h) _outputImageMat[i + 3][j] = (int)vgetq_lane_f64(tmpPxlVal2, 1);
-            }
-        }
-    } 
-    // Replicate-Padding case
-    else {
-        for (int j = 0; j < w; j++) {
-            for (int i = 0; i < h; i += 4) {
-                float64x2_t tmpPxlVal1 = vdupq_n_f64(0.0);
-                float64x2_t tmpPxlVal2 = vdupq_n_f64(0.0);
-
-                for (int k = -kHalfSize; k <= kHalfSize; k++) {
-                    int tmpPos = i + k;
-
-                    float64x2_t kernelVal = vdupq_n_f64(_kernel[k + kHalfSize]);
-                    float64x2_t inputVal1, inputVal2;
-
-                    if (tmpPos < 0) {
-                        inputVal1 = vdupq_n_f64(_inputImageMat[0][j]);
-                        inputVal2 = inputVal1;
-                    } else if (tmpPos >= h) {
-                        inputVal1 = vdupq_n_f64(_inputImageMat[h - 1][j]);
-                        inputVal2 = inputVal1;
-                    } else {
-                        inputVal1 = vld1q_f64(&_inputImageMat[tmpPos][j]);
-                        inputVal2 = vld1q_f64(&_inputImageMat[tmpPos + 2][j]);
+                    for (int idx = 2; idx < 4; idx++) {
+                        int pos = tmpPos + idx;
+                        if (pos >= 0 && pos < h) {
+                            padded2[idx - 2] = _inputImageMat[pos][j];
+                        }
                     }
 
-                    tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1);
-                    tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2);
+                    inputVal1 = vld1q_f64(padded1);
+                    inputVal2 = vld1q_f64(padded2);
                 }
 
-                // Store results
-                _outputImageMat[i][j] = (int)vgetq_lane_f64(tmpPxlVal1, 0);
-                if (i + 1 < h) _outputImageMat[i + 1][j] = (int)vgetq_lane_f64(tmpPxlVal1, 1);
-                if (i + 2 < h) _outputImageMat[i + 2][j] = (int)vgetq_lane_f64(tmpPxlVal2, 0);
-                if (i + 3 < h) _outputImageMat[i + 3][j] = (int)vgetq_lane_f64(tmpPxlVal2, 1);
+                tmpPxlVal1 = vfmaq_f64(tmpPxlVal1, kernelVal, inputVal1);
+                tmpPxlVal2 = vfmaq_f64(tmpPxlVal2, kernelVal, inputVal2);
             }
+
+            // Store the result back to the output matrix
+            double result1[2], result2[2];
+            vst1q_f64(result1, tmpPxlVal1);
+            vst1q_f64(result2, tmpPxlVal2);
+
+            if (i < h)
+                _outputImageMat[i][j] = (int)round(result1[0]);
+            if (i + 1 < h)
+                _outputImageMat[i + 1][j] = (int)round(result1[1]);
+            if (i + 2 < h)
+                _outputImageMat[i + 2][j] = (int)round(result2[0]);
+            if (i + 3 < h)
+                _outputImageMat[i + 3][j] = (int)round(result2[1]);
         }
     }
 }

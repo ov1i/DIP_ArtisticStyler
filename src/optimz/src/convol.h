@@ -10,8 +10,7 @@
 
 #ifdef __ARM_NEON
     #include <arm_neon.h>  // For ARM based processors (ex. Mac M1, M2...)
-    #include <sys/auxv.h>
-    #include <asm/hwcap.h>
+    #include <sys/sysctl.h>
     void horizConvol_NEON(int **_inputImageMat, double **_outputImageMat, double *_kernel, int w, int h, int kSize, int _pFlag);
     void vertConvol_NEON(double **_inputImageMat, int **_outputImageMat, double *_kernel, int w, int h, int kSize, int _pFlag);
 #elif defined(__AVX__)

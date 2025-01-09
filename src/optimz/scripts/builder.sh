@@ -17,13 +17,13 @@ main() {
         # gcc -c src/convol.c -lm -o src/convo_lib_obj.o # -> Static lib build
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then # Linux
             echo -e "\n...Linux detected continuing with the appropriate library compilation...\n"
-            gcc -shared -o lib/convo_lib.so -fPIC src/convol.c -lm -mavx
+            gcc -shared -o dynamic_libs/convo_lib.so -fPIC src/convol.c -lm -mavx -mfma
         elif [[ "$OSTYPE" == "darwin"* ]]; then  # Mac OSX
             echo -e "\n...MacOS detected continuing with the appropriate library compilation...\n"
-            gcc -shared -o lib/convo_lib.so -fPIC src/convol.c -lm -mfpu=neon
+            gcc -shared -o dynamic_libs/convo_lib.so -fPIC src/convol.c -lm
         else 
             echo -e "\nNo specific OS found continuing with default library compilation!\n"
-            gcc -shared -o lib/convo_lib.so -fPIC src/convol.c -lm
+            gcc -shared -o dynamic_libs/convo_lib.so -fPIC src/convol.c -lm
         fi
         if [ $? -ne 0 ]; then
             echo -e "\n\nFailed to compile the library. Exiting with result -1.\n\n"
@@ -45,7 +45,7 @@ main() {
 
         # gcc -g -lm -mavx -o tests/convo_lib_obj.o src/convol.c
         echo -e "COMPILE of convolution lib STARTED\n.."
-        gcc -c src/convol.c -g -lm -o tests/convo_lib_obj.o
+        gcc -c src/convol.c -g -lm -mavx -mfma -o tests/convo_lib_obj.o
         if [ $? -ne 0 ]; then
             echo -e "\n\nFailed to compile the library. Exiting with result -1.\n\n"
             exit -1
@@ -61,11 +61,20 @@ main() {
         echo -e "::Library built successfully::\n"
         
         echo -e "\n::Building the test program started::\n.."
-        # gcc tests/run_convo_tests.c -L tests/ -l:convo_lib.a -mavx -lm -g -o tests/run_convo_tests.o
-        gcc tests/run_convo_tests.c -L tests/ -l:convo_lib.a -lm -g -o tests/run_convo_tests.o
+        if [[ "$OSTYPE" == "darwin"* ]]; then  # Mac OSX
+            echo -e "\n...MacOS detected continuing with the appropriate build...\n"
+            gcc -g -o tests/run_convo_tests.o tests/run_convo_tests.c $(realpath tests/convo_lib.a) -lm
+            if [ $? -ne 0 ]; then
+                echo "Failed to compile the test program. Exiting with result -1."
+                exit -1
+            fi
+        else # Linux or anyother distro
+            echo -e "\n...No specific OS detected continuing with the appropriate build...\n"
+            gcc tests/run_convo_tests.c -L tests/ -l:convo_lib.a -lm -g -o tests/run_convo_tests.o
+        fi
         if [ $? -ne 0 ]; then
             echo "Failed to compile the test program. Exiting with result -1."
-            exit 1
+            exit -1
         fi
         echo -e "::Building the test program finished::\n"
 
@@ -73,7 +82,7 @@ main() {
         ./tests/run_convo_tests.o
         if [ $? -ne 0 ]; then
             echo "Failed to run tests due to execution erros. Exiting with result -1."
-            exit 1
+            exit -1
         fi
         echo -e "::Execution of test cases finished::\n"
 

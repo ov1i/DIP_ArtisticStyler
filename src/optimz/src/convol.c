@@ -507,8 +507,8 @@ int** separable_convol(int** inputImage, double* hK, double* vK, int w, int h, i
             horizConvol_AVX(inputImage, _horizConvoRes, hK, w, h, kSize, _pFlag);
             vertConvol_AVX(_horizConvoRes, _finalConvoRes, vK, w, h, kSize, _pFlag);
         #elif defined(__ARM_NEON)
-            horizConvol_NEON(inputImage, _horizConvoRes, hK, w, h, kSize, _pFlag);
-            vertConvol_NEON(_horizConvoRes, _finalConvoRes, vK, w, h, kSize, _pFlag);
+            horizConvol_NEON(inputImage, _horizConvoRes, hK, w, h, kSize);
+            vertConvol_NEON(_horizConvoRes, _finalConvoRes, vK, w, h, kSize);
         #endif
     } else {
         // Fall back to basic method if no SIMD support is available

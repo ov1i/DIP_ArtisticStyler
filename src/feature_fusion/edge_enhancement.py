@@ -27,10 +27,14 @@ class t_flagsDPack(ctypes.Structure):
 
 def setup_c_lib():
     if platform.system() == 'Windows':
-        c_lib = ctypes.CDLL(os.path.abspath(os.path.join(os.getcwd(), 'src/optimz/dynamic_libs/convo_lib.dll')))
+        c_lib = ctypes.CDLL(os.path.abspath('dynamic_libs/convo_lib.dll'))
+    elif platform.system() == 'Linux':
+        c_lib = ctypes.CDLL(os.path.abspath('dynamic_libs/convo_lib.so'))
+    elif platform.system() == 'Darwin':
+        c_lib = ctypes.CDLL(os.path.abspath('dynamic_libs/convo_lib.dylib'))
     else:
-        c_lib = ctypes.CDLL(os.path.abspath(os.path.join(os.getcwd(), 'src/optimz/dynamic_libs/convo_lib.so')))
-    
+        c_lib = ctypes.CDLL(os.path.abspath('dynamic_libs/convo_lib.so'))
+
     # Section C convolution wrapper
     convol_c = c_lib.covolveWrapper
 

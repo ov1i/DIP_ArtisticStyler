@@ -12,10 +12,10 @@ from feature_fusion.spectrum_extractor import feature_fusion_wrapper
 
 print("\n\n:::::::::SCRIPT RUNNING:::::::::\n\n")
 
-initial_img = cv2.imread("res/source/p1.jpg")
+initial_img = cv2.imread("res/source/targets/t1.jpg")
 initial_img = cv2.resize(initial_img, (512, 512))
 
-painting_img = cv2.imread("res/source/p6.jpg")
+painting_img = cv2.imread("res/source/paintings/p3.jpg")
 painting_img = cv2.resize(painting_img, (512, 512))
 
 if(initial_img is None):

@@ -4,7 +4,8 @@ __pycache__/
 *$py.class
 
 # C extensions
-*.so
+# *.so
+
 .DS_Store
 
 # Distribution / packaging
@@ -75,6 +76,9 @@ docs/_build/
 # PyBuilder
 .pybuilder/
 target/
+
+# VS Code
+.vscode
 
 # Jupyter Notebook
 .ipynb_checkpoints

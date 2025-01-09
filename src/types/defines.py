@@ -1,2 +1,6 @@
-M_BGR = 1
-M_RGB = 0
+global_vars = {
+    "kernel_size": 5,
+    "sigma": 1.0,
+    "weight": 0.6,
+    "padding_flag": 1,
+}

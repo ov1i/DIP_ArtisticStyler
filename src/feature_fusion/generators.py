@@ -1,37 +1,38 @@
 import numpy as np
+from src.types.defines import global_vars
 
 ## Gaussian Kernel Generator
-def GK_generator(size, sigma, rec = 0):
+def GK_generator(rec = 0):
 
-    if not np.isclose(6 * sigma + 1, size):
-        print("Warning kernel size should be close to ", int(6 * sigma + 1), " (6 * sigma + 1)")
+    if not np.isclose(6 * global_vars["sigma"] + 1, global_vars["kernel_size"]):
+        print("Warning kernel size should be close to ", int(6 * global_vars["sigma"] + 1), " (6 * sigma + 1)")
         if rec == 1:
             print("Recommanded flag ON")
-            print("Using recommanded size ", int(6 * sigma + 1))
-            size = int(6 * sigma + 1)
+            print("Using recommanded size ", int(6 * global_vars["sigma"] + 1))
+            global_vars["kernel_size"] = int(6 * global_vars["sigma"] + 1)
         elif rec == 0:
             print("Recommanded flag OFF")
             print("Continuing with the requested size")
 
 
 
-    k = [[0 for _ in range(size)] for _ in range(size)]
-    c = size // 2
+    k = [[0 for _ in range(global_vars["kernel_size"])] for _ in range(global_vars["kernel_size"])]
+    c = global_vars["kernel_size"] // 2
     norm_val = 0
 
-    for i in range(size):
-        for j in range(size):
+    for i in range(global_vars["kernel_size"]):
+        for j in range(global_vars["kernel_size"]):
             x,y = i - c, j - c
-            k[i][j] = (1 / (2 * np.pi * sigma ** 2) * np.exp(-(x ** 2 + y ** 2) / (2 * sigma ** 2)))
+            k[i][j] = (1 / (2 * np.pi * global_vars["sigma"] ** 2) * np.exp(-(x ** 2 + y ** 2) / (2 * global_vars["sigma"] ** 2)))
             norm_val += k[i][j]
     
-    for i in range(size):
-        for j in range(size):
+    for i in range(global_vars["kernel_size"]):
+        for j in range(global_vars["kernel_size"]):
             k[i][j] /= norm_val
 
     return np.array(k)
 
-def GK_separator(kernel, size):
+def GK_separator(kernel):
     horiz_kernel = np.sum(kernel, axis=0)
     vert_kernel = np.sum(kernel, axis=1)
     

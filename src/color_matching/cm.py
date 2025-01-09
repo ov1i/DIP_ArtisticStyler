@@ -21,7 +21,7 @@ def match_colors(src, painting):
       Bs += np.mean(Bp)
 
       #clip
-      Ls = np.clip(Ls, 0, 100)
+      Ls = np.clip(Ls, 0, 255)
       As = np.clip(As, -128, 127)
       Bs = np.clip(Bs, -128, 127)
 

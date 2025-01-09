@@ -82,3 +82,4 @@ wcwidth==0.2.13
 Werkzeug==3.0.4
 widgetsnbextension==4.0.13
 zipp==3.20.2
+PySimpleGUI==4.70.1

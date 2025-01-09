@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from src.types.defines import global_vars
 
 def to_freq_dom(img):
     # Apply FFT to the image
@@ -26,8 +27,8 @@ def get_mag_ph(img):
 
     return mag, ph
 
-def blend_mag(enh_mag, painting_mag, alpha):
-    blended_mag= (1 - alpha) * enh_mag + alpha * painting_mag
+def blend_mag(enh_mag, painting_mag):
+    blended_mag= (1 - global_vars["weight"]) * enh_mag + global_vars["weight"] * painting_mag
     
     return blended_mag
 
@@ -37,7 +38,7 @@ def reconstruct_fft(mag, ph):
 
     return reconstructed_fft
 
-def feature_fusion_wrapper(target_image, painting_image, alpha = 0.6):
+def feature_fusion_wrapper(target_image, painting_image):
     target_LCH = target_image[:,:,0]
     painting_LCH = painting_image[:,:,0]
 
@@ -47,7 +48,7 @@ def feature_fusion_wrapper(target_image, painting_image, alpha = 0.6):
     target_mag, target_ph = get_mag_ph(target_freq)
     painting_mag, painting_ph = get_mag_ph(painting_freq)
     
-    mag = blend_mag(target_mag, painting_mag, alpha)
+    mag = blend_mag(target_mag, painting_mag)
     
     freq_fusedLCH = reconstruct_fft(mag, target_ph)
 
